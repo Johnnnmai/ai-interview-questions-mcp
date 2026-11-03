@@ -2,13 +2,13 @@
 
 [![npm](https://img.shields.io/npm/v/ai-interview-questions-mcp)](https://www.npmjs.com/package/ai-interview-questions-mcp) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-An MCP server that brings **100 graded AI Engineer interview questions with model answers** into Claude, Cursor, VS Code, or any MCP client. Practice LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production and coding questions, then run a mock interview with your assistant.
+An MCP server that brings **200 graded interview questions with model answers** into Claude, Cursor, VS Code, or any MCP client: **100 AI Engineer** questions (LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production, coding) and **100 Investment Banking** questions (accounting, valuation, M&A, LBO, industry and restructuring). Practice, then run a mock interview with your assistant.
 
-- 100 questions, each graded **Entry / Mid / Senior**, with a model answer
-- 50 deep dives with an answer framework, likely follow-ups and common mistakes
-- Runs offline over stdio. No API keys, no account, no network calls, no telemetry
+- 200 questions (ids `aie-001` to `aie-100` and `ib-001` to `ib-100`), each graded **Entry / Mid / Senior**, with a model answer
+- 50 AI Engineer deep dives with an answer framework, likely follow-ups and common mistakes
+- Runs offline over stdio, or over Streamable HTTP (see [Remote HTTP](#remote-http)). No API keys, no account, no telemetry
 
-Questions come from the free [AI Engineer Interview Questions](https://johnnnmai.github.io/ai-engineer-interview-questions/?utm_source=mcp&utm_medium=readme&utm_campaign=line27_20261101) bank by Valenx Press.
+Questions come from the free [AI Engineer Interview Questions](https://johnnnmai.github.io/ai-engineer-interview-questions/?utm_source=mcp&utm_medium=readme&utm_campaign=line27_20261101) bank and the Investment Banking question bank by Valenx Press. Want more IB practice? Get the free [IB Top 30 questions guide](https://sirjohnnymai.gumroad.com/l/ib-top-30-questions?utm_source=mcp&utm_medium=readme&utm_campaign=line27_20261101).
 
 ## Try it
 
@@ -17,23 +17,29 @@ Ask your assistant:
 - "Give me a 5-question Senior mock interview on RAG, one question at a time."
 - "Search the interview questions for KV cache and show me the model answer."
 - "Quiz me on agents, then score my answer to aie-041 from 1 to 5."
+- "Run a 5-question Investment Banking mock interview on valuation."
+- "Walk me through ib-001 and then ask me a follow-up."
 
 ## Tools
 
 | Tool | What it does |
 |---|---|
-| `list_topics` | The 9 topics with question counts per level |
-| `search_questions` | Keyword search over questions and answers. Filters: `topic`, `level`, `limit` |
-| `get_question` | One question by id (`aie-026`), number (`26`) or slug (`what-is-rag`): model answer, framework, follow-ups, common mistakes. `include_answer=false` hides the answer for practice |
-| `random_question` | 1 to 10 random questions with answers hidden. Filters: `topic`, `level`; `seed` replays the same set |
+| `list_topics` | The 14 topics (9 AI Engineer, 5 Investment Banking) with question counts per level |
+| `search_questions` | Keyword search over questions and answers. Filters: `track`, `topic`, `level`, `limit` |
+| `get_question` | One question by id (`aie-026`, `ib-012`), number (`26`) or slug (`what-is-rag`): model answer, framework, follow-ups, common mistakes. `include_answer=false` hides the answer for practice |
+| `random_question` | 1 to 10 random questions with answers hidden. Filters: `track`, `topic`, `level`; `seed` replays the same set |
 
 All tools are read-only.
 
-**Prompt:** `mock_interview` (args: `topic`, `level`, `count`) runs a full round: one question at a time, a 1 to 5 score against the model answer, a follow-up, and a study list at the end.
+**Prompt:** `mock_interview` (args: `topic`, `level`, `count`, `track`) runs a full round: one question at a time, a 1 to 5 score against the model answer, a follow-up, and a study list at the end.
 
 **Resources:** `aiq://topics` and `aiq://question/{id}` (for example `aiq://question/aie-003`).
 
-Topics: `llm-fundamentals`, `prompting`, `rag`, `agents`, `fine-tuning`, `evaluation`, `system-design`, `production`, `coding`.
+Tracks: `ai-engineer`, `investment-banking`.
+
+AI Engineer topics: `llm-fundamentals`, `prompting`, `rag`, `agents`, `fine-tuning`, `evaluation`, `system-design`, `production`, `coding`.
+
+Investment Banking topics: `ib-accounting`, `ib-valuation`, `ib-ma`, `ib-lbo`, `ib-industry`.
 
 ## Install
 
@@ -104,6 +110,18 @@ npm install && npm run build && npm test
 
 Then point your client at `node /path/to/ai-interview-questions-mcp/build/index.js`.
 
+## Remote HTTP
+
+The same tools are available over [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) for clients that only accept remote MCP servers (for example Claude connectors and ChatGPT apps). The HTTP server is stateless and read-only, needs no auth, and stores nothing.
+
+Hosted endpoint: coming soon. Run your own in one command:
+
+```bash
+npm run start:http        # http://localhost:3000/mcp
+```
+
+Or deploy the repo to Vercel as is: `api/mcp.js` plus `vercel.json` serve the endpoint at `/mcp`.
+
 ## Free tools that pair with it
 
 - [Answer self-check](https://johnnnmai.github.io/ai-engineer-interview-questions/answer-check/?utm_source=mcp&utm_medium=readme&utm_campaign=line27_20261101): paste an answer, get a rubric score in the browser
@@ -118,11 +136,12 @@ Every tool result ends with a short source line and these links, tagged `utm_sou
 ```bash
 npm install
 npm run build        # compile src/ to build/
-npm test             # stdio client calls every tool, prompt and resource
+npm test             # stdio client calls every tool, prompt and resource, then the HTTP test
+npm run start:http   # Streamable HTTP server on PORT (default 3000), endpoint /mcp
 npx @modelcontextprotocol/inspector node build/index.js
 ```
 
-`data/questions.json` is generated from the public files of the [question bank repo](https://github.com/Johnnnmai/ai-engineer-interview-questions) with `scripts/build_data.py`.
+`data/questions.json` is generated from the public files of the [question bank repo](https://github.com/Johnnnmai/ai-engineer-interview-questions) with `scripts/build_data.py`. `data/ib-questions.json` holds the 100 Investment Banking questions (`scripts/import_ib.py`).
 
 The content is educational interview practice, not a record of questions asked by any specific employer. Corrections are welcome via issues.
 

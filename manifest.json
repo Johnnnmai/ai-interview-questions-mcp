@@ -2,30 +2,82 @@
   "manifest_version": "0.3",
   "name": "ai-interview-questions-mcp",
   "display_name": "AI Interview Questions",
-  "version": "1.0.0",
-  "description": "100 graded AI Engineer interview questions with model answers, plus a mock interview prompt.",
-  "long_description": "Practice AI Engineer interviews inside Claude: LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production and coding. Search questions, draw random practice sets, read model answers with frameworks, follow-ups and common mistakes, or run a full mock interview. Offline, no API keys, no telemetry.",
-  "author": { "name": "Valenx Press", "email": "press@valenx.org", "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp" },
-  "repository": { "type": "git", "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp" },
+  "version": "1.1.0",
+  "description": "200 graded interview questions with model answers: 100 AI Engineer and 100 Investment Banking, plus a mock interview prompt.",
+  "long_description": "Practice AI Engineer and Investment Banking interviews inside Claude. AI Engineer: LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production and coding. Investment Banking: accounting, valuation, M&A, LBO, industry and restructuring. Search questions, draw random practice sets, read model answers with frameworks, follow-ups and common mistakes, or run a full mock interview. Offline, no API keys, no telemetry.",
+  "author": {
+    "name": "Valenx Press",
+    "email": "press@valenx.org",
+    "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp"
+  },
   "homepage": "https://github.com/Johnnnmai/ai-interview-questions-mcp",
   "documentation": "https://github.com/Johnnnmai/ai-interview-questions-mcp#readme",
   "support": "https://github.com/Johnnnmai/ai-interview-questions-mcp/issues",
-  "privacy_policies": ["https://github.com/Johnnnmai/ai-interview-questions-mcp/blob/main/PRIVACY.md"],
+  "privacy_policies": [
+    "https://github.com/Johnnnmai/ai-interview-questions-mcp/blob/main/PRIVACY.md"
+  ],
   "license": "MIT",
-  "keywords": ["interview", "ai-engineer", "llm", "rag", "mock-interview"],
+  "keywords": [
+    "interview",
+    "ai-engineer",
+    "llm",
+    "rag",
+    "mock-interview",
+    "investment-banking"
+  ],
   "server": {
     "type": "node",
     "entry_point": "build/index.js",
-    "mcp_config": { "command": "node", "args": ["${__dirname}/build/index.js"] }
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/build/index.js"
+      ]
+    }
   },
   "tools": [
-    { "name": "list_topics", "description": "List topics with question counts per level" },
-    { "name": "search_questions", "description": "Keyword search over questions and answers" },
-    { "name": "get_question", "description": "One question with model answer, framework, follow-ups and common mistakes" },
-    { "name": "random_question", "description": "Random practice questions with answers hidden" }
+    {
+      "name": "list_topics",
+      "description": "List topics with question counts per level"
+    },
+    {
+      "name": "search_questions",
+      "description": "Keyword search over questions and answers"
+    },
+    {
+      "name": "get_question",
+      "description": "One question with model answer, framework, follow-ups and common mistakes"
+    },
+    {
+      "name": "random_question",
+      "description": "Random practice questions with answers hidden"
+    }
   ],
   "prompts": [
-    { "name": "mock_interview", "description": "Run a mock AI Engineer interview round", "arguments": ["topic", "level", "count"], "text": "Run a mock AI Engineer interview using the ai-interview-questions tools." }
+    {
+      "name": "mock_interview",
+      "description": "Run a mock AI Engineer or Investment Banking interview round",
+      "arguments": [
+        "topic",
+        "level",
+        "count",
+        "track"
+      ],
+      "text": "Run a mock interview using the ai-interview-questions tools."
+    }
   ],
-  "compatibility": { "platforms": ["darwin", "win32", "linux"], "runtimes": { "node": ">=18.0.0" } }
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
 }

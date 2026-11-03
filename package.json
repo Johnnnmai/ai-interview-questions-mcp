@@ -1,7 +1,7 @@
 {
   "name": "ai-interview-questions-mcp",
-  "version": "1.0.0",
-  "description": "MCP server with 100 graded AI Engineer interview questions and model answers (LLMs, RAG, agents, evals, system design). Offline, no API keys.",
+  "version": "1.1.0",
+  "description": "MCP server with 200 graded interview questions and model answers: 100 AI Engineer (LLMs, RAG, agents, evals, system design) and 100 Investment Banking (accounting, valuation, M&A, LBO). Offline over stdio, or hosted over Streamable HTTP. No API keys.",
   "type": "module",
   "bin": {
     "ai-interview-questions-mcp": "build/index.js"
@@ -16,9 +16,10 @@
   "scripts": {
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js',0o755)\"",
     "start": "node build/index.js",
-    "test": "node test/smoke.mjs",
+    "test": "node test/smoke.mjs && node test/http.mjs",
     "prepublishOnly": "npm run build && npm test",
-    "build:data": "python3 scripts/build_data.py ../ai-engineer-interview-questions"
+    "build:data": "python3 scripts/build_data.py ../ai-engineer-interview-questions",
+    "start:http": "node build/http.js"
   },
   "keywords": [
     "mcp",
@@ -32,7 +33,10 @@
     "rag",
     "ai-agents",
     "mock-interview",
-    "career"
+    "career",
+    "investment-banking",
+    "finance-interview",
+    "streamable-http"
   ],
   "author": "Valenx Press <press@valenx.org>",
   "license": "MIT",
