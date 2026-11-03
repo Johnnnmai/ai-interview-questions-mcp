@@ -1,0 +1,10 @@
+{
+  "name": "ai-interview-questions",
+  "version": "1.0.0",
+  "description": "100 graded AI Engineer interview questions with model answers (LLMs, RAG, agents, evals, system design), plus a mock-interview skill. Offline, no API keys.",
+  "author": { "name": "Valenx Press", "email": "press@valenx.org" },
+  "homepage": "https://github.com/Johnnnmai/ai-interview-questions-mcp",
+  "repository": "https://github.com/Johnnnmai/ai-interview-questions-mcp",
+  "license": "MIT",
+  "keywords": ["interview", "ai-engineer", "llm", "rag", "mock-interview", "mcp"]
+}

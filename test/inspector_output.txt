@@ -1,0 +1,45 @@
+MCP Inspector CLI (2.13.0) against node build/index.js, 2026-11-02 22:55 PST
+
+$ --method tools/list
+['list_topics', 'search_questions', 'get_question', 'random_question']
+
+$ --method tools/call --tool-name list_topics
+isError= False
+100 AI Engineer interview questions, updated 2026-11-01.
+
+- llm-fundamentals: LLM Fundamentals (15 questions: 6 Entry, 7 Mid, 2 Senior; ids aie-001-aie-015)
+- prompting: Prompting and Structured Output (10 questions: 3 Entry, 5 Mid, 2 Senior; ids aie-016-aie-025)
+- rag: RAG and Retrieval (15 questions: 2 Entry, 8 Mid, 5 Senior; ids aie-026-aie-040)
+- agents: Agents, Tool Use and MCP (12 questions:
+
+$ --method tools/call --tool-name search_questions --tool-arg query=prompt injection --tool-arg limit=3
+isError= False
+3 match(es) for "prompt injection":
+- aie-021 [Senior] (prompting) What is prompt injection and how do you defend against it?
+- aie-016 [Entry] (prompting) What makes a good production prompt?
+- aie-022 [Mid] (prompting) How do you manage and version prompts in a team?
+---
+Source: AI Engineer Interview Questions by Valenx Press, https://johnnnmai.github.io/ai-engineer-interview-questions/?utm_sour
+
+$ --method tools/call --tool-name get_question --tool-arg id=aie-041
+isError= False
+# aie-041: What is an AI agent, and how is it different from a chain?
+Level: Entry · Topic: Agents, Tool Use and MCP
+
+What it tests: Whether you can define an agent precisely (a model choosing the next action in a loop), say when not to use one, and show you know what it takes to run one safely.
+
+## Model answer
+A chain is a fixed sequence of steps defined by the developer. An agent is a loop wher
+
+$ --method tools/call --tool-name random_question --tool-arg count=2 --tool-arg seed=7
+isError= False
+Practice set (2): answer each out loud in under 2 minutes, then call get_question for the model answer.
+- aie-010 [Mid] (llm-fundamentals) What is quantization and why is it important for deployment?
+- aie-074 [Mid] (system-design) Design a document-processing (extraction) pipeline.
+---
+Source: AI Engineer Interview Questions by Valenx Press, https://johnnnmai.github.io/ai-engineer-interview-quest
+
+$ --method prompts/list
+['mock_interview']
+$ --method resources/templates/list
+['aiq://question/{id}']

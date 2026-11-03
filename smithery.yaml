@@ -1,0 +1,9 @@
+# Smithery / generic stdio launch config. No configuration needed.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({ command: 'npx', args: ['-y', 'ai-interview-questions-mcp'] })
+  exampleConfig: {}

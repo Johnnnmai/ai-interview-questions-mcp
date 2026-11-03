@@ -1,0 +1,2139 @@
+{
+ "source": "https://johnnnmai.github.io/ai-engineer-interview-questions/",
+ "publisher": "Valenx Press",
+ "updated": "2026-11-01",
+ "topics": [
+  {
+   "id": "llm-fundamentals",
+   "name": "LLM Fundamentals"
+  },
+  {
+   "id": "prompting",
+   "name": "Prompting and Structured Output"
+  },
+  {
+   "id": "rag",
+   "name": "RAG and Retrieval"
+  },
+  {
+   "id": "agents",
+   "name": "Agents, Tool Use and MCP"
+  },
+  {
+   "id": "fine-tuning",
+   "name": "Fine-Tuning and Model Adaptation"
+  },
+  {
+   "id": "evaluation",
+   "name": "Evaluation"
+  },
+  {
+   "id": "system-design",
+   "name": "AI System Design"
+  },
+  {
+   "id": "production",
+   "name": "Production, Cost and Safety"
+  },
+  {
+   "id": "coding",
+   "name": "Coding"
+  }
+ ],
+ "questions": [
+  {
+   "id": "aie-001",
+   "number": 1,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "Explain the transformer architecture at a high level.",
+   "answer": "A transformer is a stack of identical blocks. Each block has (1) multi-head self-attention, which lets every token mix information from other tokens, and (2) a position-wise feed-forward network (MLP). Residual connections and layer normalization wrap both sub-layers so deep stacks train stably. Most modern LLMs are decoder-only: causal masking means each token attends only to earlier tokens, and the model is trained to predict the next token. Position information comes from positional encodings, today usually rotary embeddings (RoPE).",
+   "follow_up": "Why do most LLMs use decoder-only instead of encoder-decoder? (One stack, one objective, scales simply and handles generation natively.)",
+   "slug": "explain-the-transformer-architecture",
+   "deep_dive": {
+    "what_it_tests": "Whether you can explain the building blocks clearly in under two minutes, connect self-attention to why transformers replaced recurrent models, and handle the standard follow-ups (decoder-only, the sqrt(d_k) scaling, quadratic cost).",
+    "framework": [
+     "Start with the shape: a stack of identical blocks.",
+     "Inside each block: multi-head self-attention, then a position-wise feed-forward network (MLP), each wrapped in residual connections and layer normalization so deep stacks train stably.",
+     "Explain self-attention: each token is projected into a query, key and value; weights are softmax(QK^T / sqrt(d_k)); the output is the weighted sum of values.",
+     "Say why it matters: any token can pull information from any other token in one step, and training runs over the whole sequence in parallel.",
+     "Describe modern LLMs: decoder-only with causal masking, trained to predict the next token, with positions from rotary embeddings (RoPE).",
+     "Name the trade-off: attention cost is O(n^2) in sequence length."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why do most LLMs use decoder-only instead of encoder-decoder?",
+      "a": "One stack, one objective, it scales simply and handles generation natively."
+     },
+     {
+      "q": "Why divide by sqrt(d_k)?",
+      "a": "Without it, dot products grow with dimension, the softmax saturates and gradients vanish."
+     }
+    ],
+    "common_mistakes": [
+     "Describing the original encoder-decoder design as if it were how most current LLMs are built.",
+     "Leaving out residual connections and layer normalization, which are why deep stacks train.",
+     "Writing the attention formula without being able to explain the sqrt(d_k) scaling.",
+     "Not mentioning the O(n^2) cost in sequence length, which drives many long-context design choices.",
+     "Forgetting where position information comes from."
+    ]
+   }
+  },
+  {
+   "id": "aie-002",
+   "number": 2,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "What is self-attention and why does it matter?",
+   "answer": "Each token is projected into a query, key and value. Attention weights are softmax(QK^T / sqrt(d_k)), and the output is the weighted sum of values. It lets any token pull information from any other token in one step, so long-range dependencies do not have to pass through a recurrent bottleneck, and the whole sequence is processed in parallel during training. The cost is O(n^2) in sequence length for compute and for the attention matrix.",
+   "follow_up": "Why divide by sqrt(d_k)? Without it, dot products grow with dimension, the softmax saturates and gradients vanish."
+  },
+  {
+   "id": "aie-003",
+   "number": 3,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "Explain the KV cache and why it matters for inference.",
+   "answer": "During autoregressive decoding, the keys and values of earlier tokens do not change, so they are stored and reused; each new token computes only its own Q, K, V. This turns per-step attention from recomputing the whole prefix into one pass over cached tensors. The trade-off is memory: per sequence it is roughly 2 x layers x kv_heads x head_dim x tokens x bytes per value, and it often limits batch size and context length more than the weights do. Grouped-query attention, KV quantization and paged allocation (as in vLLM's PagedAttention) exist to shrink or pack it.",
+   "follow_up": "Estimate KV-cache memory for a 32-layer model, 8 KV heads, head_dim 128, 8k tokens, fp16: 2x32x8x128x8192x2 bytes, about 1 GiB per sequence.",
+   "slug": "what-is-kv-cache",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand autoregressive decoding well enough to explain what is cached and why, can estimate memory with the formula, and know that the cache, not only the weights, often limits batch size and context length.",
+    "framework": [
+     "State the reason: during autoregressive decoding the keys and values of earlier tokens do not change.",
+     "State the saving: store and reuse them, so each new token computes only its own Q, K and V instead of recomputing the whole prefix.",
+     "State the cost: memory per sequence is roughly 2 x layers x kv_heads x head_dim x tokens x bytes per value.",
+     "State the consequence: it often limits batch size and context length more than the weights do.",
+     "Name the mitigations: grouped-query attention, KV quantization and paged allocation (as in vLLM's PagedAttention)."
+    ],
+    "follow_ups": [
+     {
+      "q": "Estimate KV-cache memory for a 32-layer model, 8 KV heads, head_dim 128, 8k tokens, fp16.",
+      "a": "2 x 32 x 8 x 128 x 8192 x 2 bytes, about 1 GiB per sequence."
+     }
+    ],
+    "common_mistakes": [
+     "Saying queries are cached; only keys and values of earlier tokens are reused.",
+     "Describing the speed benefit without the memory cost.",
+     "Assuming model weights are the only memory constraint when serving long contexts or large batches.",
+     "Not being able to do the back-of-envelope memory estimate.",
+     "Confusing the KV cache with response caching or prompt caching for shared prefixes, which are application-level cost levers."
+    ]
+   }
+  },
+  {
+   "id": "aie-004",
+   "number": 4,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "Compare pre-training, instruction tuning and preference tuning (RLHF/DPO).",
+   "answer": "Pre-training: next-token prediction on trillions of tokens; gives knowledge and fluency but not helpful behavior. Instruction tuning (SFT): supervised training on prompt-response pairs so the model follows instructions and a chat format. Preference tuning: trains on comparisons of better vs worse answers. RLHF fits a reward model and optimizes the policy with RL (e.g. PPO) under a KL penalty to the SFT model; DPO skips the reward model and optimizes directly on preference pairs, which is simpler and more stable. Each stage uses far less data than the one before.",
+   "follow_up": "When would you pick DPO over PPO-style RLHF? (Smaller team, offline preference data, want stability; PPO when you need online exploration or a reusable reward model.)",
+   "slug": "pre-training-vs-instruction-tuning-vs-rlhf",
+   "deep_dive": {
+    "what_it_tests": "Whether you know what each training stage contributes to a chat model, can explain why a pre-trained model alone is not a helpful assistant, and can compare RLHF with DPO without hand-waving.",
+    "framework": [
+     "Pre-training: next-token prediction on a very large text corpus. It produces knowledge and fluency, not assistant behavior.",
+     "Instruction tuning (supervised fine-tuning, SFT): train on prompt-response pairs so the model follows instructions and a chat format.",
+     "Preference tuning: train on comparisons where one answer is better than another, to shape helpfulness, tone and refusals.",
+     "Compare the two preference methods: RLHF trains a reward model and optimizes against it with RL (for example PPO) under a KL penalty; DPO optimizes directly on the preference pairs.",
+     "Point out the data funnel: each stage uses far less data than the one before, but the data gets more curated."
+    ],
+    "follow_ups": [
+     {
+      "q": "When would you pick DPO over PPO-style RLHF?",
+      "a": "With a small team, offline preference data and a need for stable training. PPO-style RLHF is worth it when you want online exploration or a reusable reward model."
+     }
+    ],
+    "common_mistakes": [
+     "Saying RLHF teaches the model new knowledge; it mostly shapes behavior that pre-training made possible.",
+     "Forgetting the KL penalty and why it exists (reward hacking).",
+     "Describing DPO as reinforcement learning; it is a classification-style loss on preference pairs.",
+     "Treating instruction tuning and preference tuning as the same step."
+    ]
+   }
+  },
+  {
+   "id": "aie-005",
+   "number": 5,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Senior",
+   "question": "What do scaling laws say, and how do they change decisions?",
+   "answer": "Loss falls as a smooth power law in parameters, data and compute (Kaplan et al., 2020). The Chinchilla work (Hoffmann et al., 2022) showed that for a fixed training budget, parameters and tokens should grow roughly together, around 20 training tokens per parameter, so many earlier models were undertrained. In practice teams now often train smaller models on far more tokens than compute-optimal because inference cost, not training cost, dominates over the model's life.",
+   "follow_up": "Why would you deliberately train past the compute-optimal point? (Cheaper serving for a model that will answer billions of requests.)",
+   "slug": "what-are-scaling-laws",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand scaling laws as a planning tool rather than trivia: how they relate model size, data and compute, and how inference cost shifts the choice away from the compute-optimal point.",
+    "framework": [
+     "State the finding: loss falls smoothly, roughly as a power law, as you add parameters, training tokens and compute.",
+     "Give the compute-optimal result: for a fixed training budget, grow parameters and tokens together, roughly 20 tokens per parameter (the 2022 Chinchilla paper).",
+     "Say what it implied: many earlier large models were undertrained for their size.",
+     "Bring in inference: a model served billions of times is cheaper to run if it is smaller, so teams train smaller models on far more tokens than compute-optimal.",
+     "Mention the limit: lower loss does not map one-to-one to every downstream task, so you still evaluate on the tasks you care about."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why would you deliberately train past the compute-optimal point?",
+      "a": "Because serving cost dominates over a model's life; a smaller model trained on more tokens is cheaper per request at similar quality."
+     }
+    ],
+    "common_mistakes": [
+     "Quoting the 20-tokens-per-parameter ratio as a law of nature rather than a compute-optimal estimate under specific assumptions.",
+     "Ignoring inference cost when choosing model size.",
+     "Assuming lower pre-training loss automatically means better results on your product task.",
+     "Confusing parameter count with active parameters in mixture-of-experts models."
+    ]
+   }
+  },
+  {
+   "id": "aie-006",
+   "number": 6,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "What is tokenization and why does it matter?",
+   "answer": "Text is split into subword units by algorithms such as BPE or unigram (SentencePiece). It matters because cost, latency and context limits are counted in tokens; token count per word varies by language (many non-English languages need more tokens for the same content); and tokenization explains odd failures such as weak character counting, arithmetic on long numbers and sensitivity to leading spaces.",
+   "follow_up": "Why can an LLM fail to count the letters in a word? (It sees tokens, not characters.)",
+   "slug": "what-is-tokenization-in-llms",
+   "deep_dive": {
+    "what_it_tests": "Whether you know that models see tokens, not characters or words, and can connect that to practical consequences: cost, context limits, multilingual products and strange errors.",
+    "framework": [
+     "Define it: text is split into subword units by an algorithm such as byte-pair encoding (BPE) or a unigram model (SentencePiece), and each unit maps to an ID.",
+     "Cost and limits: pricing, latency and the context window are all counted in tokens.",
+     "Languages: the same content can take noticeably more tokens in some non-English languages, which raises cost and uses more context.",
+     "Failure modes: counting letters, reversing strings and long-number arithmetic are hard because the model never sees individual characters.",
+     "Practical habit: measure token counts with the model's own tokenizer when budgeting prompts."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why can an LLM fail to count the letters in a word?",
+      "a": "It sees tokens, not characters, so the letters inside a token are not directly visible to it."
+     }
+    ],
+    "common_mistakes": [
+     "Assuming one token equals one word for every language and content type.",
+     "Estimating prompt size with one model's tokenizer and deploying on another.",
+     "Blaming reasoning for errors that come from tokenization, such as character-level tasks.",
+     "Forgetting that output tokens count toward cost and context too."
+    ]
+   }
+  },
+  {
+   "id": "aie-007",
+   "number": 7,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "What is the context window and how does it affect system design?",
+   "answer": "It is the maximum number of tokens (prompt plus output) the model can attend to. Larger windows allow whole documents in the prompt but increase cost and latency, and models use information unevenly across long inputs (relevant facts in the middle are used less reliably). Design still needs retrieval, summarization or memory to choose what goes in, plus a token budget per section (system, history, retrieved context, output).",
+   "slug": "what-is-a-context-window",
+   "deep_dive": {
+    "what_it_tests": "Whether you treat the context window as a design constraint with a budget, not as a reason to skip retrieval or memory, and whether you know models use long inputs unevenly.",
+    "framework": [
+     "Define it: the maximum number of tokens the model can attend to in one call, prompt plus generated output.",
+     "Costs: longer prompts raise price and time to first token on every call.",
+     "Quality: models use long inputs unevenly; facts buried in the middle are used less reliably.",
+     "Design: decide what goes in with retrieval, summarization or memory, and give each section a token budget (system, history, retrieved context, output).",
+     "Verify: test long-context behavior on your own tasks instead of trusting the advertised maximum."
+    ],
+    "follow_ups": [
+     {
+      "q": "If a model supports a million tokens, why still use RAG?",
+      "a": "Cost and latency per call, uneven use of long context, and the need for fresh, permission-filtered content all still favor retrieving only what is relevant."
+     }
+    ],
+    "common_mistakes": [
+     "Forgetting that output tokens share the same window as the prompt.",
+     "Stuffing everything into a long window instead of retrieving the relevant parts.",
+     "Letting chat history grow without trimming or summarizing.",
+     "Trusting the advertised window without testing recall at different positions."
+    ]
+   }
+  },
+  {
+   "id": "aie-008",
+   "number": 8,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "What do temperature and top-p do, and how do you choose them?",
+   "answer": "Temperature rescales logits before softmax: low values make output near-deterministic, high values flatten the distribution. Top-p (nucleus) sampling keeps only the smallest set of tokens whose cumulative probability reaches p. Use low temperature (0 to 0.3) for extraction, classification and code; moderate (0.7 to 1.0) for brainstorming or creative text. Even at temperature 0, outputs can vary slightly across runs because of batching and floating-point effects, so do not rely on it for strict determinism.",
+   "slug": "temperature-vs-top-p",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand sampling mechanically and can pick settings for a task, and whether you know the practical caveat that low temperature does not give strict determinism.",
+    "framework": [
+     "Temperature: divide the logits by T before softmax; low T sharpens the distribution, high T flattens it.",
+     "Top-p (nucleus sampling): sample only from the smallest set of tokens whose cumulative probability reaches p.",
+     "Choosing: low temperature (0 to 0.3) for extraction, classification and code; moderate (around 0.7 to 1.0) for brainstorming and creative text.",
+     "Tune one knob at a time; changing both makes behavior hard to reason about.",
+     "Caveat: even at temperature 0 outputs can differ across runs because of batching and floating-point effects."
+    ],
+    "follow_ups": [
+     {
+      "q": "What is the difference between top-p and top-k?",
+      "a": "Top-k keeps a fixed number of tokens; top-p keeps a variable number whose probabilities add up to p, so it adapts to how confident the model is."
+     }
+    ],
+    "common_mistakes": [
+     "Saying temperature changes what the model knows; it only changes how it samples.",
+     "Using high temperature for structured output or code.",
+     "Assuming temperature 0 means identical outputs every time.",
+     "Tuning temperature and top-p together without a reason."
+    ]
+   }
+  },
+  {
+   "id": "aie-009",
+   "number": 9,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "Fine-tuning vs in-context learning: what is the difference?",
+   "answer": "In-context learning puts instructions and examples in the prompt; the weights do not change, iteration is instant, but every request pays for the extra tokens and behavior is bounded by the window. Fine-tuning changes the weights with training examples; it is good for consistent format, tone, a narrow task or making a smaller model as good as a bigger prompted one, but it needs data, evaluation and redeployment, and it is a poor way to add frequently changing facts (use retrieval for that)."
+  },
+  {
+   "id": "aie-010",
+   "number": 10,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "What is quantization and why is it important for deployment?",
+   "answer": "Storing weights (and sometimes activations or the KV cache) in fewer bits, e.g. 8-bit or 4-bit integers instead of 16-bit floats. It cuts memory roughly 2x to 4x and often raises throughput because decoding is memory-bandwidth bound. Post-training methods such as GPTQ and AWQ keep quality loss small at 4-bit for many models, but you must re-run your task evals because degradation is uneven (math, code and long context tend to suffer first).",
+   "slug": "what-is-quantization-in-llms",
+   "deep_dive": {
+    "what_it_tests": "Whether you can explain why fewer bits help serving (memory and bandwidth), name the common methods, and show the engineering discipline of checking quality on your own tasks afterwards.",
+    "framework": [
+     "Define it: store weights, and sometimes activations or the KV cache, in fewer bits, such as 8-bit or 4-bit integers instead of 16-bit floats.",
+     "Memory: roughly 2x smaller at 8-bit and 4x smaller at 4-bit for the weights.",
+     "Speed: decoding is usually memory-bandwidth bound, so moving fewer bytes per token often raises throughput.",
+     "Methods: post-training quantization such as GPTQ and AWQ keeps quality loss small at 4-bit for many models; QLoRA uses 4-bit weights for fine-tuning.",
+     "Risk: quality loss is uneven, often showing first in math, code and long-context tasks, so re-run your evals."
+    ],
+    "follow_ups": [
+     {
+      "q": "Weight-only vs weight-and-activation quantization?",
+      "a": "Weight-only cuts memory and helps bandwidth-bound decoding; quantizing activations too can speed up compute-bound prefill but is harder to do without quality loss."
+     }
+    ],
+    "common_mistakes": [
+     "Claiming quantization has no quality cost.",
+     "Checking only perplexity or a public benchmark instead of task evals.",
+     "Forgetting the KV cache, which can dominate memory at long context.",
+     "Assuming 4-bit is always faster; it depends on kernels and hardware support."
+    ]
+   }
+  },
+  {
+   "id": "aie-011",
+   "number": 11,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "Explain LoRA and QLoRA.",
+   "answer": "LoRA freezes the base weights and learns a low-rank update for selected matrices: W + BA, where A and B have small rank r (often 8 to 64). Trainable parameters drop by orders of magnitude, adapters are small files, and several adapters can share one base model. QLoRA (Dettmers et al., 2023) keeps the frozen base in 4-bit and trains LoRA adapters on top, making fine-tuning of large models feasible on a single GPU.",
+   "follow_up": "Which layers do you apply LoRA to? (Attention projections at minimum; adding MLP layers usually helps quality at more cost.)",
+   "slug": "explain-lora-and-qlora",
+   "deep_dive": {
+    "what_it_tests": "Whether you know the mechanism (a frozen base plus a learned low-rank update), why it is cheap, what QLoRA adds, and the practical choices: rank, alpha, target modules and how to spot overfitting.",
+    "framework": [
+     "LoRA: freeze the base weights and learn a low-rank update W + BA for selected matrices, with small rank r (often 8 to 64).",
+     "Why it is cheap: trainable parameters drop by orders of magnitude, adapters are small files, and several adapters can share one base model.",
+     "QLoRA: keep the frozen base in 4-bit and train LoRA adapters on top, so large models can be fine-tuned on a single GPU.",
+     "Practical choices: learning rate, epochs, rank r and alpha, target modules, batch size and sequence length.",
+     "Watch for overfitting: falling training loss with flat or rising validation loss; stop early and keep the best checkpoint."
+    ],
+    "follow_ups": [
+     {
+      "q": "Which layers do you apply LoRA to?",
+      "a": "Attention projections at minimum; adding MLP layers usually helps quality at more cost."
+     },
+     {
+      "q": "What is quantization and why does it matter for deployment?",
+      "a": "Storing weights in fewer bits, for example 8-bit or 4-bit instead of 16-bit. It cuts memory roughly 2x to 4x; re-run task evals because degradation is uneven."
+     }
+    ],
+    "common_mistakes": [
+     "Saying LoRA updates all the weights, or that it changes the base model file.",
+     "Confusing QLoRA (a 4-bit frozen base during training) with quantizing a model for serving.",
+     "Not knowing which modules to target or what rank and alpha control.",
+     "Ignoring validation loss and training until the adapter overfits.",
+     "Treating fine-tuning as the way to add frequently changing facts; retrieval is better for that."
+    ]
+   }
+  },
+  {
+   "id": "aie-012",
+   "number": 12,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Senior",
+   "question": "Explain Mixture of Experts and its trade-offs.",
+   "answer": "An MoE layer replaces one feed-forward block with many experts plus a router that sends each token to the top-k experts (often k = 2). Total parameters are large but active parameters per token are small, so quality per training FLOP improves. Costs: all experts must still sit in memory, routing needs load-balancing losses, expert parallelism adds communication, and batching is less efficient at low traffic.",
+   "slug": "what-is-mixture-of-experts",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand sparse activation, can separate total from active parameters, and know the systems costs that make MoE harder to train and serve than a dense model.",
+    "framework": [
+     "Structure: replace a dense feed-forward block with many expert networks plus a router.",
+     "Routing: for each token the router picks the top-k experts (often k = 2) and combines their outputs.",
+     "Benefit: total parameters are large but active parameters per token are small, so quality per training FLOP improves.",
+     "Costs: all experts must still be held in memory; load-balancing losses are needed so the router does not overuse a few experts.",
+     "Serving: expert parallelism adds communication, and batching is less efficient at low traffic because tokens spread across experts."
+    ],
+    "follow_ups": [
+     {
+      "q": "Does an MoE model with 8 experts cost 8 times as much to run?",
+      "a": "No; compute per token depends on active experts (for example 2), but memory depends on all experts."
+     }
+    ],
+    "common_mistakes": [
+     "Saying each expert specializes in a human-readable topic; routing is learned and not necessarily interpretable.",
+     "Comparing MoE and dense models by total parameters only.",
+     "Ignoring memory: sparse compute does not mean small memory.",
+     "Leaving out load balancing."
+    ]
+   }
+  },
+  {
+   "id": "aie-013",
+   "number": 13,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "How do reasoning models differ from standard chat models?",
+   "answer": "Reasoning models are trained, typically with reinforcement learning on verifiable tasks, to produce a long internal chain of thought before the final answer, and they spend more inference-time compute per query. They are stronger on math, code and multi-step planning but slower and more expensive, and often worse value for simple lookups or style tasks. In a product, route only hard queries to them and set a reasoning budget.",
+   "slug": "reasoning-models-vs-chat-models",
+   "deep_dive": {
+    "what_it_tests": "Whether you know how reasoning models are trained and where they help, and whether you can make a cost-aware product decision rather than defaulting to the strongest model.",
+    "framework": [
+     "Training: reasoning models are trained, typically with reinforcement learning on tasks with verifiable answers, to think through a long chain of thought before answering.",
+     "Inference: they spend more compute per query, so they are slower and cost more.",
+     "Strengths: math, code, multi-step planning and problems where checking intermediate steps matters.",
+     "Weaknesses: poor value for simple lookups, short rewrites and style tasks.",
+     "Product design: route only hard queries to them, set a reasoning budget, and evaluate cost per solved task."
+    ],
+    "follow_ups": [
+     {
+      "q": "Should you still add chain-of-thought prompts to a reasoning model?",
+      "a": "Usually not; it already reasons internally. Clear task instructions and output format matter more."
+     }
+    ],
+    "common_mistakes": [
+     "Using a reasoning model for every request regardless of cost and latency.",
+     "Assuming the visible reasoning is a faithful record of how the answer was produced.",
+     "Ignoring time to first token in user-facing flows.",
+     "Comparing models on accuracy only, not cost per solved task."
+    ]
+   }
+  },
+  {
+   "id": "aie-014",
+   "number": 14,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Mid",
+   "question": "Why do LLMs hallucinate, and how do you reduce it?",
+   "answer": "The model is trained to produce plausible continuations, not to verify facts, and it has no built-in signal for what it does not know. Reduce it by grounding answers in retrieved sources and asking for citations, allowing and rewarding an \"I don't know\" path, constraining outputs (schemas, enumerations), lowering temperature for factual tasks, and checking claims afterwards against the sources with an automated verifier.",
+   "slug": "why-do-llms-hallucinate",
+   "deep_dive": {
+    "what_it_tests": "Whether you can explain the root cause in one sentence, give layered mitigations that a production system can actually use, and say how you would measure the problem rather than only describe it.",
+    "framework": [
+     "Cause: the model is trained to produce plausible continuations, not to verify facts, and it has no built-in signal for what it does not know.",
+     "Ground it: retrieve sources and ask for citations.",
+     "Allow abstention: make \"I don't know\" an acceptable, rewarded answer.",
+     "Constrain it: schemas and enumerations for outputs, lower temperature for factual tasks.",
+     "Verify afterwards: check claims against the sources with an automated verifier.",
+     "Measure it: split answers into claims and report the share supported by sources, plus citation checks."
+    ],
+    "follow_ups": [
+     {
+      "q": "How should a RAG system decide to say \"I don't know\"?",
+      "a": "Combine low retrieval or re-ranker scores below a calibrated threshold, no chunk that answers the question, and a verifier step that checks the draft answer against sources. Evaluate refusal precision as well as answer accuracy."
+     }
+    ],
+    "common_mistakes": [
+     "Saying hallucination is solved by a bigger model or a stricter prompt alone.",
+     "Offering only one mitigation instead of layers (grounding, abstention, constraints, verification).",
+     "Not explaining how you would measure faithfulness.",
+     "Accepting citations without checking that the cited passage contains the claim.",
+     "Penalizing \"I don't know\" so the system is pushed to guess."
+    ]
+   }
+  },
+  {
+   "id": "aie-015",
+   "number": 15,
+   "topic": "llm-fundamentals",
+   "topic_name": "LLM Fundamentals",
+   "level": "Entry",
+   "question": "What is the difference between an embedding model and a generative model?",
+   "answer": "An embedding model maps text to a fixed-length vector so that similar meanings are close in vector space; it is used for search, clustering, deduplication and classification. A generative model produces tokens. Embedding calls are far cheaper and are the backbone of retrieval; the generative model then reads what was retrieved.",
+   "slug": "embedding-model-vs-generative-model",
+   "deep_dive": {
+    "what_it_tests": "Whether you can explain the different outputs and jobs of the two model types and show how they combine in a retrieval system.",
+    "framework": [
+     "Embedding model: maps a piece of text to a fixed-length vector so that similar meanings land close together.",
+     "Generative model: predicts and outputs tokens to produce text, code or structured data.",
+     "Uses of embeddings: semantic search, clustering, deduplication, classification and recommendations.",
+     "Cost: embedding calls are far cheaper and faster, so you can embed a whole corpus once.",
+     "Together: in RAG the embedding model finds candidate passages and the generative model reads them and writes the answer."
+    ],
+    "follow_ups": [
+     {
+      "q": "Can you use a generative model to create embeddings?",
+      "a": "You can take hidden states from it, but dedicated embedding models trained with contrastive objectives usually retrieve better and are much cheaper."
+     }
+    ],
+    "common_mistakes": [
+     "Saying embeddings store the text; they store a lossy representation used for similarity.",
+     "Mixing embeddings from two different models in one index.",
+     "Using a generative model for tasks a cheap embedding classifier can handle.",
+     "Forgetting to re-embed the corpus when the embedding model changes."
+    ]
+   }
+  },
+  {
+   "id": "aie-016",
+   "number": 16,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Entry",
+   "question": "What makes a good production prompt?",
+   "answer": "A clear role and task, the exact output format, constraints written as rules, a few representative examples (including edge cases), and delimiters separating instructions from untrusted input. Prompts are code: version them, keep them in source control, and change them only with an eval run showing the effect."
+  },
+  {
+   "id": "aie-017",
+   "number": 17,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Entry",
+   "question": "Zero-shot vs few-shot prompting: when do you use each?",
+   "answer": "Zero-shot when the task is common and the format is simple. Few-shot when the format is unusual, labels are subtle, or you need consistent style. Pick examples that cover the hard cases and vary them; models copy surface patterns, so unbalanced examples bias outputs (e.g. all examples labelled positive)."
+  },
+  {
+   "id": "aie-018",
+   "number": 18,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Mid",
+   "question": "What is chain-of-thought prompting and when does it help?",
+   "answer": "Asking the model to reason step by step before answering. It helps on multi-step arithmetic, logic and planning, and makes errors easier to inspect. It costs tokens and latency, adds little on simple lookups, and the written reasoning is not a guaranteed faithful account of how the answer was produced. Reasoning-trained models already do this internally.",
+   "slug": "what-is-chain-of-thought-prompting",
+   "deep_dive": {
+    "what_it_tests": "Whether you know when chain-of-thought is worth its cost, can describe how to use it in production, and understand that the written reasoning is not necessarily what drove the answer.",
+    "framework": [
+     "Define it: ask the model to reason step by step before giving a final answer, or show examples that include reasoning.",
+     "Where it helps: multi-step arithmetic, logic, planning and problems with several constraints.",
+     "Where it does not: simple lookups, classification with clear labels, short rewrites.",
+     "Costs: more output tokens, so higher cost and latency.",
+     "Production pattern: separate the reasoning from a final structured answer, and do not treat the reasoning as a faithful explanation."
+    ],
+    "follow_ups": [
+     {
+      "q": "How would you show that chain-of-thought helps on your task?",
+      "a": "Run the same eval set with and without it and compare accuracy, cost and latency."
+     }
+    ],
+    "common_mistakes": [
+     "Adding chain-of-thought to every prompt by default.",
+     "Parsing the answer out of free-form reasoning instead of a separate field.",
+     "Treating the written reasoning as a faithful explanation.",
+     "Forgetting the token cost at scale."
+    ]
+   }
+  },
+  {
+   "id": "aie-019",
+   "number": 19,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Mid",
+   "question": "How do you get reliable structured output (JSON) from an LLM?",
+   "answer": "Use the provider's structured output or JSON-schema mode, or constrained decoding when self-hosting, so output is forced to match the schema. Then validate with a schema library (e.g. Pydantic), and on failure retry with the validation error included. Keep schemas flat, use enums for categorical fields, and make optional fields explicit rather than letting the model invent values.",
+   "slug": "how-to-get-reliable-json-output-from-an-llm",
+   "deep_dive": {
+    "what_it_tests": "Whether you rely on enforcement and validation rather than prompt wording alone, and whether you design schemas that the model can fill correctly.",
+    "framework": [
+     "Enforce the format: use the provider's structured output or JSON-schema mode, or constrained decoding (grammar-guided generation) when self-hosting.",
+     "Validate every response against the schema in code, for example with Pydantic or a JSON Schema validator.",
+     "Repair on failure: retry once or twice with the validation error included in the prompt, then fall back or escalate.",
+     "Design the schema: keep it flat, use enums for categories, make optional fields explicit and allow null instead of forcing guesses.",
+     "Monitor the parse failure rate and the rate of empty or default values in production."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why not just ask for JSON in the prompt?",
+      "a": "Prompt-only instructions work most of the time, but at scale you get truncated objects, extra prose and wrong types; enforcement plus validation handles those cases."
+     }
+    ],
+    "common_mistakes": [
+     "Relying on a prompt instruction alone for production parsing.",
+     "Skipping semantic validation because the JSON parsed.",
+     "Making every field required, which pushes the model to invent values.",
+     "Retrying without telling the model what was wrong.",
+     "Using a high temperature for extraction tasks."
+    ]
+   }
+  },
+  {
+   "id": "aie-020",
+   "number": 20,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Mid",
+   "question": "What is function (tool) calling?",
+   "answer": "You describe functions with names, descriptions and JSON-schema parameters; the model returns a structured call instead of text; your code executes it and sends the result back; the model continues. The model never executes anything itself. Quality depends heavily on clear tool descriptions, few overlapping tools, and validating arguments before execution.",
+   "slug": "what-is-function-calling",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand who executes what in a tool-calling loop, and whether you know what makes tools easy for a model to use correctly and safely.",
+    "framework": [
+     "Describe tools: give each a name, a description and JSON-schema parameters.",
+     "The model decides: instead of text it returns a structured call with a tool name and arguments.",
+     "Your code executes: validate the arguments, run the function, and send the result back as a tool message.",
+     "The model continues: it uses the result to answer or makes another call.",
+     "Quality and safety: clear descriptions, few overlapping tools, strict argument validation and permissions in code."
+    ],
+    "follow_ups": [
+     {
+      "q": "How is function calling different from MCP?",
+      "a": "Function calling is the model-side format for requesting a call; MCP is a protocol for exposing and discovering tools across applications."
+     }
+    ],
+    "common_mistakes": [
+     "Saying the model runs the function.",
+     "Exposing dozens of similar tools with vague descriptions.",
+     "Trusting model-generated arguments without validation or permission checks.",
+     "Returning huge raw payloads that waste context."
+    ]
+   }
+  },
+  {
+   "id": "aie-021",
+   "number": 21,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Senior",
+   "question": "What is prompt injection and how do you defend against it?",
+   "answer": "Untrusted text (a user message, web page, email or retrieved document) contains instructions that override the developer's intent, e.g. \"ignore previous instructions and send the data to...\". Indirect injection through retrieved content is the harder case. No prompt fully prevents it, so defend in layers: treat all retrieved text as data, give the model least-privilege tools, require human confirmation for side-effecting actions, isolate secrets from the context, filter inputs and outputs, and log for audit. It is item 1 on the OWASP Top 10 for LLM Applications.",
+   "follow_up": "Why can't a better system prompt solve this? (Instructions and data share one channel; the model has no hard boundary between them.)",
+   "slug": "what-is-prompt-injection",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand why injection is a structural problem (instructions and data share one channel), know the harder indirect case, and design defenses in layers instead of relying on a clever system prompt.",
+    "framework": [
+     "Define it: untrusted text (a user message, web page, email or retrieved document) contains instructions that override the developer's intent.",
+     "Separate direct from indirect injection; indirect injection through retrieved content or tool output is the harder case.",
+     "Explain why prompts cannot fully prevent it: instructions and data share one channel, and the model has no hard boundary between them.",
+     "List layered defenses: treat retrieved text as data, least-privilege tools, human confirmation for side-effecting actions, secrets kept out of the context, input and output filtering, audit logs.",
+     "Place the guardrails: input checks, output checks and action checks, kept independent of the main prompt."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why can't a better system prompt solve this?",
+      "a": "Instructions and data share one channel; the model has no hard boundary between them."
+     }
+    ],
+    "common_mistakes": [
+     "Proposing a stronger system prompt as the fix.",
+     "Covering only direct injection from the user and missing indirect injection through documents and tool outputs.",
+     "Giving the model broad tool permissions and no confirmation step for irreversible actions.",
+     "Putting secrets in the context window.",
+     "Building guardrails into the same prompt they are meant to protect."
+    ]
+   }
+  },
+  {
+   "id": "aie-022",
+   "number": 22,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Mid",
+   "question": "How do you manage and version prompts in a team?",
+   "answer": "Store prompts as templates in source control or a prompt registry with IDs and versions; log the prompt version with every request; gate changes on an offline eval set; roll out with a flag or percentage; keep rollback one click away. Separate the template from variables so diffs are readable."
+  },
+  {
+   "id": "aie-023",
+   "number": 23,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Mid",
+   "question": "How do you shorten prompts without losing quality?",
+   "answer": "Remove repeated instructions, move static context into a cached prefix (many providers discount cached prompt tokens), summarize long histories, retrieve only the top chunks, and replace long examples with one good one. Measure quality before and after on the eval set; cost wins that drop accuracy are not wins."
+  },
+  {
+   "id": "aie-024",
+   "number": 24,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Entry",
+   "question": "What is a system prompt and what belongs in it?",
+   "answer": "The highest-priority instruction block for a conversation: role, scope, rules, output style and refusal behavior. Keep it stable (it can then be prompt-cached), keep secrets out of it (assume it can be extracted), and put per-request data in the user turn."
+  },
+  {
+   "id": "aie-025",
+   "number": 25,
+   "topic": "prompting",
+   "topic_name": "Prompting and Structured Output",
+   "level": "Senior",
+   "question": "How would you choose between a long prompt, RAG and fine-tuning for a new feature?",
+   "answer": "Start with prompting plus a small eval set; it is the fastest loop. Add RAG when answers depend on private or changing knowledge. Fine-tune when you need consistent format or behavior that prompting cannot hold, lower latency or cost via a smaller model, or have thousands of good examples. They combine: fine-tuned model plus RAG is common."
+  },
+  {
+   "id": "aie-026",
+   "number": 26,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Entry",
+   "question": "Explain the RAG architecture end to end.",
+   "answer": "Indexing: parse documents, split into chunks, embed each chunk, store vectors with metadata (source, date, permissions). Query time: optionally rewrite the query, embed it, retrieve top-k by vector and/or keyword search, apply metadata filters, re-rank, then put the best chunks in the prompt with instructions to answer only from them and cite sources. Evaluate retrieval and generation separately.",
+   "follow_up": "Where does RAG usually fail first? (Retrieval: wrong chunk or missing chunk, not the generator.)",
+   "slug": "what-is-rag",
+   "deep_dive": {
+    "what_it_tests": "Whether you can describe both halves of a RAG system (indexing and query time), name the parts that decide quality (chunking, hybrid search, re-ranking, metadata), and know that retrieval, not the generator, is usually where it fails first.",
+    "framework": [
+     "Define it in one line: retrieve relevant chunks from your own documents at query time and put them in the prompt, so the model answers from them and cites sources.",
+     "Indexing path: parse documents, split them into chunks, embed each chunk, and store the vectors with metadata (source, date, permissions).",
+     "Query path: optionally rewrite the query, embed it, retrieve top-k by vector and/or keyword search, apply metadata filters, then re-rank.",
+     "Generation: put the best chunks in the prompt with instructions to answer only from them and cite sources; make declining an acceptable answer.",
+     "Close with evaluation: measure retrieval and generation separately, because retrieval usually fails first."
+    ],
+    "follow_ups": [
+     {
+      "q": "Where does RAG usually fail first?",
+      "a": "Retrieval: the wrong chunk or a missing chunk, not the generator."
+     },
+     {
+      "q": "How should a RAG system decide to say \"I don't know\"?",
+      "a": "Combine signals: low retrieval or re-ranker scores below a calibrated threshold, no chunk that answers the question, and a verifier step that checks the draft answer against sources. Tell the model that declining is acceptable."
+     }
+    ],
+    "common_mistakes": [
+     "Describing RAG as only \"a vector database plus an LLM\" and skipping parsing, chunking, metadata and re-ranking.",
+     "Using fixed character counts for chunks by default instead of following document structure and measuring recall on real questions.",
+     "Relying on vector search alone when users search for exact identifiers, names or error messages.",
+     "Blaming the model first when answers are wrong; most issues are parsing, chunking or retrieval.",
+     "Leaving no path for the system to decline when nothing relevant was retrieved."
+    ]
+   }
+  },
+  {
+   "id": "aie-027",
+   "number": 27,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "How do you choose a chunking strategy?",
+   "answer": "Follow document structure (headings, paragraphs, code blocks, table rows) rather than fixed character counts; typical chunk sizes are a few hundred tokens with modest overlap. Small chunks give precise matches but lose context; large chunks keep context but dilute similarity and cost more tokens. A common fix is to retrieve small chunks and pass their parent section to the model. Choose by measuring recall on real questions, not by default settings.",
+   "slug": "how-to-choose-a-chunking-strategy-for-rag",
+   "deep_dive": {
+    "what_it_tests": "Whether you choose chunking from the documents and the questions rather than defaults, and whether you can explain the size trade-off and how to measure it.",
+    "framework": [
+     "Follow structure: split on headings, sections, paragraphs, code blocks and table rows rather than fixed character counts.",
+     "Pick a size range: typically a few hundred tokens with modest overlap, then tune.",
+     "Know the trade-off: small chunks match precisely but lose context; large chunks keep context but dilute similarity and cost more tokens.",
+     "Use parent retrieval when needed: retrieve small chunks, then pass their parent section to the model.",
+     "Decide by measurement: compare recall@k on real questions for each strategy."
+    ],
+    "follow_ups": [
+     {
+      "q": "What goes wrong with fixed-size chunking?",
+      "a": "It cuts sentences, tables and code mid-way and separates headings from their content, so chunks lose meaning and retrieve poorly."
+     }
+    ],
+    "common_mistakes": [
+     "Using a library's default chunk size without testing.",
+     "Splitting tables and code blocks in the middle.",
+     "Dropping headings and document titles that give chunks context.",
+     "Judging chunking by answer quality alone instead of retrieval recall."
+    ]
+   }
+  },
+  {
+   "id": "aie-028",
+   "number": 28,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "What is hybrid search and when should you use it?",
+   "answer": "Combining lexical search (BM25) with dense vector search, then merging results, often with reciprocal rank fusion. Use it when queries contain exact identifiers, product codes, names, error messages or rare terms that embeddings blur. It is a sensible default for enterprise search.",
+   "slug": "what-is-hybrid-search",
+   "deep_dive": {
+    "what_it_tests": "Whether you know the blind spots of pure vector search, can explain how lexical and dense results are merged, and know when hybrid is worth the extra complexity.",
+    "framework": [
+     "Define it: run lexical search (usually BM25) and dense vector search on the same query, then merge the results.",
+     "Merge: reciprocal rank fusion (RRF) combines ranked lists without needing comparable scores.",
+     "When to use it: queries with exact identifiers, product codes, names, error messages or rare domain terms.",
+     "Default: it is a sensible default for enterprise and support search.",
+     "Follow with a re-ranker, and measure recall against each method alone."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why use rank fusion instead of adding the scores?",
+      "a": "BM25 scores and cosine similarities are on different, query-dependent scales, so summing them is unstable; ranks are comparable."
+     }
+    ],
+    "common_mistakes": [
+     "Assuming vector search alone handles exact identifiers well.",
+     "Adding raw BM25 and cosine scores together without normalization.",
+     "Skipping evaluation of each retriever on its own.",
+     "Forgetting that BM25 needs the same text preprocessing at index and query time."
+    ]
+   }
+  },
+  {
+   "id": "aie-029",
+   "number": 29,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "How does re-ranking work and why use it?",
+   "answer": "Retrieve a wide candidate set cheaply (e.g. top 50), then score each query-document pair with a cross-encoder or LLM that reads both together, and keep the top 5 to 10. Cross-encoders are more accurate than comparing two independently computed embeddings but too slow to run over the whole corpus, so they are used only on candidates.",
+   "slug": "what-is-re-ranking-in-rag",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand the bi-encoder vs cross-encoder difference and can place a re-ranker in a pipeline with sensible candidate counts and latency.",
+    "framework": [
+     "Retrieve wide and cheap: get a candidate set, for example the top 50, from vector, keyword or hybrid search.",
+     "Re-score each candidate with a model that reads the query and the passage together, usually a cross-encoder or an LLM.",
+     "Keep the top 5 to 10 for the prompt.",
+     "Explain why: a cross-encoder sees query and passage jointly, so it judges relevance better than comparing two separately computed embeddings.",
+     "Manage cost: it is too slow for the whole corpus, so tune the candidate count against latency."
+    ],
+    "follow_ups": [
+     {
+      "q": "Can you use an LLM as the re-ranker?",
+      "a": "Yes, it can be more accurate on hard queries, but it is slower and more expensive, so it is usually applied to a small candidate set."
+     }
+    ],
+    "common_mistakes": [
+     "Re-ranking only the top 5, which leaves the re-ranker nothing to fix.",
+     "Running a cross-encoder over the whole corpus.",
+     "Not measuring first-stage recall, which caps what re-ranking can achieve.",
+     "Ignoring the added latency in user-facing flows."
+    ]
+   }
+  },
+  {
+   "id": "aie-030",
+   "number": 30,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Senior",
+   "question": "What is the \"lost in the middle\" problem?",
+   "answer": "Liu et al. (2023) found that models use relevant information placed at the start or end of a long context more reliably than information in the middle. Mitigations: retrieve fewer, better chunks; put the most relevant first; re-rank; and test long-context behavior on your own tasks rather than trusting the advertised window.",
+   "slug": "what-is-lost-in-the-middle",
+   "deep_dive": {
+    "what_it_tests": "Whether you know that long-context use is uneven, can explain the practical impact on RAG prompts, and can name concrete mitigations and a way to test them.",
+    "framework": [
+     "State the finding: models use relevant information at the start or end of a long context more reliably than information in the middle (a 2023 study showed a U-shaped curve).",
+     "Impact: stuffing many retrieved chunks into the prompt can bury the one that matters.",
+     "Mitigate with fewer, better chunks: retrieve and re-rank so only strong passages go in.",
+     "Order deliberately: put the most relevant passage first, and the instructions or question near the end.",
+     "Test on your own tasks by placing a known fact at different positions and measuring accuracy."
+    ],
+    "follow_ups": [
+     {
+      "q": "Does a bigger context window fix this?",
+      "a": "Not by itself; the window sets how much fits, not how evenly the model uses it."
+     }
+    ],
+    "common_mistakes": [
+     "Treating the advertised context length as usable at full quality.",
+     "Sending as many chunks as fit instead of the best few.",
+     "Putting the key instructions only in the middle of a long prompt.",
+     "Not testing position effects on your own model."
+    ]
+   }
+  },
+  {
+   "id": "aie-031",
+   "number": 31,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Senior",
+   "question": "How do you evaluate a RAG system?",
+   "answer": "Separately. Retrieval: recall@k, precision@k, MRR or nDCG against labelled question-to-source pairs. Generation: faithfulness (claims supported by retrieved context), answer relevance, correctness against a reference, and citation accuracy. Build a golden set from real user questions, use an LLM judge calibrated against human labels, and track latency and cost per answer.",
+   "slug": "how-do-you-evaluate-a-rag-system",
+   "deep_dive": {
+    "what_it_tests": "Whether you split evaluation into retrieval and generation, know concrete metrics for each, build a golden set from real questions, and can trace a failing answer to the stage that broke.",
+    "framework": [
+     "Evaluate retrieval and generation separately.",
+     "Retrieval: recall@k, precision@k, MRR or nDCG against labelled question-to-source pairs.",
+     "Generation: faithfulness (claims supported by the retrieved context), answer relevance, correctness against a reference, citation accuracy.",
+     "Data and grading: a golden set from real user questions, an LLM judge calibrated against human labels, plus latency and cost per answer.",
+     "Debugging: trace a failing question stage by stage and fix the earliest failing stage."
+    ],
+    "follow_ups": [
+     {
+      "q": "How do you debug poor RAG answer quality?",
+      "a": "Trace a failing question through ingestion, parsing, chunking, retrieval, ranking, prompt assembly and generation, and fix the earliest failing stage."
+     }
+    ],
+    "common_mistakes": [
+     "Scoring only the final answer, so you cannot tell whether retrieval or generation failed.",
+     "Building the eval set from invented questions instead of real user questions.",
+     "Using an uncalibrated LLM judge as the source of truth.",
+     "Ignoring latency and cost per answer.",
+     "Changing the prompt or model before checking whether the right chunk was even retrieved."
+    ]
+   }
+  },
+  {
+   "id": "aie-032",
+   "number": 32,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "How do you keep a RAG index fresh when documents change?",
+   "answer": "Incremental ingestion keyed by document ID and content hash; re-embed only changed chunks; delete chunks of removed documents (stale chunks are a common source of wrong answers); store timestamps and versions as metadata and filter or boost by recency. Re-embed everything when you change the embedding model, because vectors from different models are not comparable."
+  },
+  {
+   "id": "aie-033",
+   "number": 33,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "How should a RAG system decide to say \"I don't know\"?",
+   "answer": "Combine signals: low retrieval scores or re-ranker scores below a calibrated threshold, no chunk that answers the question, and a verifier step that checks the draft answer against sources. Instruct the model explicitly that declining is acceptable and evaluate refusal precision as well as answer accuracy."
+  },
+  {
+   "id": "aie-034",
+   "number": 34,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "How do you choose an embedding model?",
+   "answer": "Benchmark candidates on your own query-document pairs (public leaderboards such as MTEB are a starting point only). Consider language coverage, domain fit, max input length, dimension (storage and speed), cost or hosting, and whether it supports asymmetric query/document modes. Record the model version with the index.",
+   "slug": "how-to-choose-an-embedding-model",
+   "deep_dive": {
+    "what_it_tests": "Whether you pick embedding models with your own evaluation rather than a leaderboard rank, and whether you think about the operational costs of changing models later.",
+    "framework": [
+     "Build a small eval set of real queries with the documents that should be retrieved.",
+     "Shortlist candidates using public leaderboards such as MTEB as a starting point only.",
+     "Compare recall@k and MRR on your eval set.",
+     "Weigh practical factors: languages, domain fit, max input length, vector dimension (storage and speed), cost or hosting, and query vs document modes.",
+     "Record the model and version with the index, since switching models means re-embedding everything."
+    ],
+    "follow_ups": [
+     {
+      "q": "Would you fine-tune an embedding model?",
+      "a": "When the domain vocabulary is unusual and you have query-document pairs; measure the gain on held-out queries first."
+     }
+    ],
+    "common_mistakes": [
+     "Choosing purely by leaderboard rank.",
+     "Mixing vectors from two models in one index.",
+     "Ignoring max input length, which silently truncates chunks.",
+     "Forgetting storage and latency costs of high dimensions."
+    ]
+   }
+  },
+  {
+   "id": "aie-035",
+   "number": 35,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Entry",
+   "question": "Compare common vector store options.",
+   "answer": "Postgres with pgvector: simplest if you already run Postgres, good to millions of vectors. Managed vector databases (e.g. Pinecone): little operations work, pay per usage. Self-hosted engines (e.g. Qdrant, Weaviate, Milvus): more control, filtering and scale. Search engines (Elasticsearch, OpenSearch) suit hybrid lexical plus vector. Pick on filtering needs, scale, latency, operations capacity and cost, not on hype."
+  },
+  {
+   "id": "aie-036",
+   "number": 36,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Senior",
+   "question": "What are HNSW and IVF indexes, and what trade-offs do they make?",
+   "answer": "Both are approximate nearest-neighbor indexes. HNSW builds a layered proximity graph: high recall and low latency but high memory and slower builds. IVF clusters vectors and searches only the nearest clusters: lower memory, tunable via the number of probes, often combined with product quantization. You trade recall for speed and memory; measure recall@k against exact search on a sample.",
+   "slug": "hnsw-vs-ivf",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand approximate nearest-neighbor search well enough to pick an index for a workload and tune it with measurements.",
+    "framework": [
+     "Both are approximate nearest-neighbor (ANN) indexes: they trade a little recall for much faster search than exact comparison.",
+     "HNSW: a layered proximity graph searched greedily from coarse to fine; high recall and low latency, but high memory and slower builds.",
+     "IVF: cluster vectors into lists and search only the nearest few clusters; lower memory, tuned by the number of probes, often combined with product quantization (PQ).",
+     "Tune: HNSW with M and efSearch, IVF with the number of lists and nprobe.",
+     "Measure recall@k against exact search on a sample, plus latency and memory."
+    ],
+    "follow_ups": [
+     {
+      "q": "What happens to recall if you lower nprobe in IVF?",
+      "a": "Search gets faster but recall falls, because fewer clusters are searched."
+     }
+    ],
+    "common_mistakes": [
+     "Treating ANN results as exact.",
+     "Choosing an index without measuring recall against exact search.",
+     "Ignoring HNSW memory overhead when sizing machines.",
+     "Not retraining IVF centroids after large data changes."
+    ]
+   }
+  },
+  {
+   "id": "aie-037",
+   "number": 37,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "What is query transformation and why does it help?",
+   "answer": "Rewriting the user query before retrieval: resolving pronouns from chat history, expanding acronyms, splitting a multi-part question into sub-queries, or generating a hypothetical answer and embedding that (HyDE). It helps when user phrasing differs from document phrasing; it adds a model call, so measure whether recall gain justifies the latency."
+  },
+  {
+   "id": "aie-038",
+   "number": 38,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Senior",
+   "question": "How do you enforce access control in RAG?",
+   "answer": "Store permission metadata (tenant, groups, document ACL) on every chunk at ingestion and filter at query time inside the retrieval call, before anything reaches the model. Never rely on the prompt to hide documents. Keep ACLs in sync with the source system and test with users who should and should not see each document.",
+   "slug": "access-control-in-rag",
+   "deep_dive": {
+    "what_it_tests": "Whether you treat permissions as a retrieval-layer control rather than a prompt instruction, and whether you think about sync, caching and testing.",
+    "framework": [
+     "Attach permission metadata to every chunk at ingestion: tenant, groups, document ACL, sensitivity.",
+     "Filter inside the retrieval query, using the caller's identity, before anything reaches the model.",
+     "Never rely on the prompt to hide documents the user should not see.",
+     "Keep ACLs in sync with source systems, including revocations, and scope caches by permission.",
+     "Test with users who should and should not see each document, and log what was retrieved."
+    ],
+    "follow_ups": [
+     {
+      "q": "Pre-filtering vs post-filtering?",
+      "a": "Pre-filtering applies permissions in the search itself so top-k is all allowed content; post-filtering drops results afterwards and can leave too few or leak through bugs."
+     }
+    ],
+    "common_mistakes": [
+     "Relying on the system prompt to hide documents.",
+     "Ignoring revocations and stale ACLs.",
+     "Sharing a response cache across users with different permissions.",
+     "Testing only with an admin account."
+    ]
+   }
+  },
+  {
+   "id": "aie-039",
+   "number": 39,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Mid",
+   "question": "What is agentic RAG?",
+   "answer": "Instead of one retrieve-then-generate pass, the model decides when and what to search, can issue several queries, read results, and search again before answering. It handles multi-hop questions better but costs more and is harder to evaluate; cap the number of steps and log each retrieval."
+  },
+  {
+   "id": "aie-040",
+   "number": 40,
+   "topic": "rag",
+   "topic_name": "RAG and Retrieval",
+   "level": "Senior",
+   "question": "How do you debug poor RAG answer quality?",
+   "answer": "Trace a failing question: was the right document ingested and parsed correctly, was it chunked sensibly, did it appear in the top-k, was it ranked high enough, was it included in the prompt, and did the model use it? Fix the earliest failing stage. Most issues are parsing, chunking or retrieval, not the generator.",
+   "slug": "how-to-debug-poor-rag-answers",
+   "deep_dive": {
+    "what_it_tests": "Whether you debug systematically by stage instead of rewriting the prompt, and whether you know where RAG usually breaks.",
+    "framework": [
+     "Collect failing questions and, for each, the document that should answer it.",
+     "Ingestion and parsing: was the document indexed, and is its text intact (tables, PDFs, scans)?",
+     "Chunking: is the answer inside one sensible chunk with its context?",
+     "Retrieval and ranking: did the chunk appear in the top-k, and was it ranked high enough to reach the prompt?",
+     "Generation: was it in the prompt and did the model use it? Fix the earliest failing stage, then add the case to the eval set."
+    ],
+    "follow_ups": [
+     {
+      "q": "The right chunk is retrieved but the answer is still wrong. What next?",
+      "a": "Check its position and the amount of competing context, tighten instructions to answer from sources, and evaluate faithfulness on that case."
+     }
+    ],
+    "common_mistakes": [
+     "Starting by changing the model or prompt.",
+     "Debugging without labeled failing cases.",
+     "Not inspecting parsed text for tables and PDFs.",
+     "Fixing a case without adding it to the eval set."
+    ]
+   }
+  },
+  {
+   "id": "aie-041",
+   "number": 41,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Entry",
+   "question": "What is an AI agent, and how is it different from a chain?",
+   "answer": "A chain is a fixed sequence of steps defined by the developer. An agent is a loop where the model chooses the next action (which tool to call, with what arguments) based on observations, until it decides the task is done. Agents handle open-ended tasks but are less predictable, so use a fixed workflow when the steps are known.",
+   "slug": "what-is-an-ai-agent",
+   "deep_dive": {
+    "what_it_tests": "Whether you can define an agent precisely (a model choosing the next action in a loop), say when not to use one, and show you know what it takes to run one safely.",
+    "framework": [
+     "Define a chain: a fixed sequence of steps defined by the developer.",
+     "Define an agent: a loop where the model chooses the next action (which tool, with what arguments) based on observations, until it decides the task is done.",
+     "Name the pattern: ReAct alternates reasoning, a tool call and reading the observation.",
+     "Give the decision rule: if you can draw the flowchart, build a workflow; use an agent when the path depends on intermediate results you cannot enumerate.",
+     "Show production awareness: step limits, timeouts, budgets, argument validation, human approval for irreversible actions, full traces, task-success evaluation."
+    ],
+    "follow_ups": [
+     {
+      "q": "Explain the ReAct pattern.",
+      "a": "Reason + Act: the model alternates between a reasoning step, a tool call and reading the observation until it can answer. In production add step limits, structured tool calls and error handling for failed tools."
+     },
+     {
+      "q": "Workflows vs agents: how do you decide?",
+      "a": "If you can draw the flowchart, build a workflow. Use an agent when the path depends on intermediate results you cannot enumerate."
+     }
+    ],
+    "common_mistakes": [
+     "Calling any multi-step LLM pipeline an agent.",
+     "Reaching for an agent when the steps are known and a workflow would be cheaper and testable.",
+     "Running agents with no step limit, budget or confirmation for irreversible actions.",
+     "Judging an agent only by its final answer; a correct answer reached through a risky tool call is still a failure.",
+     "Trusting tool outputs, which may contain injected instructions."
+    ]
+   }
+  },
+  {
+   "id": "aie-042",
+   "number": 42,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "Explain the ReAct pattern.",
+   "answer": "Reason + Act (Yao et al., 2022): the model alternates between a reasoning step, a tool call, and reading the observation, repeating until it can answer. It grounds reasoning in real tool results. In production you add step limits, structured tool calls instead of parsed text, and error handling for failed tools.",
+   "slug": "what-is-the-react-pattern",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand the basic agent loop, why interleaving reasoning with tool results beats reasoning alone, and what controls a production loop needs.",
+    "framework": [
+     "Define it: ReAct (reason plus act) interleaves a short reasoning step, an action such as a tool call, and an observation of the result, repeated until done.",
+     "Why it helps: each step is grounded in real tool output instead of the model's memory, which reduces made-up facts.",
+     "Relation to tool calling: modern APIs implement the action step as structured function calls.",
+     "Controls: a step limit, a token or cost budget, a clear stop condition and error handling for failed tools.",
+     "Alternatives: plan-then-execute when the steps are known up front."
+    ],
+    "follow_ups": [
+     {
+      "q": "How do you stop a ReAct agent from looping?",
+      "a": "Cap steps and cost, detect repeated calls with the same arguments, and return a partial result or escalate when limits are hit."
+     }
+    ],
+    "common_mistakes": [
+     "Describing ReAct as a model rather than a prompting and control pattern.",
+     "Running the loop without step or cost limits.",
+     "Parsing actions from free text when structured tool calls are available.",
+     "Using an open-ended loop for a task with fixed steps."
+    ]
+   }
+  },
+  {
+   "id": "aie-043",
+   "number": 43,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "What is the Model Context Protocol (MCP)?",
+   "answer": "An open protocol, introduced in late 2024, that standardizes how applications expose tools, resources and prompts to LLM clients. A server describes its tools once and any MCP-compatible client can use them, instead of a custom integration per app and per model. Security still matters: servers run with real permissions, so authenticate them, scope their access and review what they expose.",
+   "follow_up": "How is MCP different from plain function calling? (Function calling is the model-side format; MCP is the client-server protocol for discovering and invoking tools across apps.)",
+   "slug": "what-is-model-context-protocol-mcp",
+   "deep_dive": {
+    "what_it_tests": "Whether you can explain what MCP standardizes, how it relates to function calling, and the trust and permission questions it raises.",
+    "framework": [
+     "Define it: an open protocol, introduced in late 2024, for connecting LLM applications to tools and data sources.",
+     "Roles: a host application runs MCP clients that connect to MCP servers.",
+     "What servers expose: tools (actions), resources (data to read) and prompts (reusable templates).",
+     "Benefit: write an integration once and use it from any compatible application, instead of custom glue per app.",
+     "Risks: servers are code you trust with data and actions, so review them, scope credentials and watch for prompt injection in returned content."
+    ],
+    "follow_ups": [
+     {
+      "q": "Does MCP replace function calling?",
+      "a": "No; the model still requests calls in its function-calling format, while MCP standardizes how the host finds and runs the tools."
+     }
+    ],
+    "common_mistakes": [
+     "Calling MCP a model feature rather than a protocol.",
+     "Ignoring the trust and permission model of third-party servers.",
+     "Treating tool output as trusted instructions.",
+     "Confusing resources (read context) with tools (actions)."
+    ]
+   }
+  },
+  {
+   "id": "aie-044",
+   "number": 44,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "How do you design good tools for an agent?",
+   "answer": "Few tools with distinct purposes, clear names and descriptions written for the model, strict typed parameters, informative error messages the model can act on, and outputs trimmed to what is needed. Make side-effecting tools idempotent where possible and separate read tools from write tools so permissions can differ."
+  },
+  {
+   "id": "aie-045",
+   "number": 45,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Senior",
+   "question": "How do you make agents reliable in production?",
+   "answer": "Bound them: max steps, timeouts and budget per task; validate every tool argument; retry transient errors with backoff; checkpoint state so long tasks can resume; require human approval for irreversible actions; and log full traces. Evaluate on task-completion suites with realistic tool failures, not only on happy paths.",
+   "slug": "how-to-make-ai-agents-reliable-in-production",
+   "deep_dive": {
+    "what_it_tests": "Whether you design agents as systems with limits, checks and observability, rather than trusting a capable model to behave.",
+    "framework": [
+     "Narrow the scope: a clear task, a small set of well-designed tools, and workflows where steps are predictable.",
+     "Validate at boundaries: schema and business-rule checks on every tool call, idempotent actions and safe retries.",
+     "Bound the loop: step limits, cost budgets, timeouts and loop detection.",
+     "Gate risky actions: human approval for payments, deletions or external messages, and least-privilege credentials.",
+     "Observe and evaluate: trace every step, evaluate full trajectories on a test suite, and review failures in production."
+    ],
+    "follow_ups": [
+     {
+      "q": "What do you evaluate besides the final answer?",
+      "a": "Tool choice, argument correctness, number of steps, cost, policy violations and whether the agent stopped or escalated appropriately."
+     }
+    ],
+    "common_mistakes": [
+     "Giving an agent broad tools and credentials for convenience.",
+     "No step, cost or time limits.",
+     "Letting the model take irreversible actions without approval.",
+     "Evaluating only final answers, not trajectories.",
+     "Having no tracing, so failures cannot be diagnosed."
+    ]
+   }
+  },
+  {
+   "id": "aie-046",
+   "number": 46,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "How do you handle memory in agents?",
+   "answer": "Short-term: the running conversation and scratchpad, trimmed or summarized to fit the window. Long-term: facts or past episodes stored externally (database or vector store) and retrieved when relevant. Write to long-term memory deliberately (what is worth keeping), and let users see or delete stored memories for privacy.",
+   "slug": "how-to-handle-memory-in-ai-agents",
+   "deep_dive": {
+    "what_it_tests": "Whether you can separate the kinds of memory an agent needs, choose a storage approach for each, and deal with relevance, staleness and privacy.",
+    "framework": [
+     "Short-term (working) memory: the current conversation and task state inside the context window.",
+     "Compression: summarize or trim older turns when the window fills.",
+     "Long-term memory: store facts or past episodes outside the model and retrieve the relevant ones per request.",
+     "Structured state: keep user preferences and task progress in a database, not just as text.",
+     "Governance: decide what to save, let users view and delete it, expire stale facts and keep data scoped per user."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why not keep the full history in a long context window?",
+      "a": "Cost and latency grow every turn, quality drops on long contexts, and old irrelevant turns distract the model."
+     }
+    ],
+    "common_mistakes": [
+     "Treating memory as one big vector store for everything.",
+     "Saving every message without a policy.",
+     "Letting stale facts override newer ones.",
+     "Ignoring user visibility, deletion and per-user isolation."
+    ]
+   }
+  },
+  {
+   "id": "aie-047",
+   "number": 47,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Senior",
+   "question": "Single agent vs multi-agent systems: when is multi-agent worth it?",
+   "answer": "Multi-agent setups (planner plus workers, or specialist agents) help when sub-tasks are separable, need different tools or prompts, or can run in parallel. They add cost, latency and coordination failures. Start with one agent and good tools; split only when evals show a single agent cannot hold the task.",
+   "slug": "single-agent-vs-multi-agent",
+   "deep_dive": {
+    "what_it_tests": "Whether you resist adding complexity without evidence, and whether you know the specific conditions under which splitting work across agents pays off.",
+    "framework": [
+     "Default: start with a single agent and a good tool set; it is cheaper, faster and easier to debug.",
+     "Multi-agent helps when work splits into independent parallel parts, such as researching several sources at once.",
+     "It also helps when sub-tasks need very different tools, permissions or instructions that would crowd one prompt.",
+     "Costs: more tokens, more latency from hand-offs, lost context between agents and harder debugging.",
+     "Decide by evaluation: compare quality, cost and latency of both designs on the same tasks."
+    ],
+    "follow_ups": [
+     {
+      "q": "How do agents share information in a multi-agent design?",
+      "a": "Usually through the orchestrator passing compact summaries or a shared, structured state, not full transcripts."
+     }
+    ],
+    "common_mistakes": [
+     "Choosing multi-agent because it sounds more advanced.",
+     "Ignoring the multiplied token cost.",
+     "Passing full transcripts between agents instead of focused summaries.",
+     "No tracing across agents, so failures cannot be located."
+    ]
+   }
+  },
+  {
+   "id": "aie-048",
+   "number": 48,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "What guardrails do agents need?",
+   "answer": "Input and output filtering, allow-lists of tools per user role, argument validation, rate and spend limits, sandboxed code execution, human confirmation for actions such as payments, emails or deletes, and treating every tool output as untrusted input (it may contain injected instructions)."
+  },
+  {
+   "id": "aie-049",
+   "number": 49,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "How do you evaluate an agent?",
+   "answer": "Task success rate on a fixed suite of realistic tasks with checkable end states, plus step count, cost, latency and error recovery. Inspect trajectories, not only outcomes: a correct final answer reached through a risky tool call is still a failure. Re-run the suite on every model or prompt change."
+  },
+  {
+   "id": "aie-050",
+   "number": 50,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Entry",
+   "question": "What is planning in an agent and why can it fail?",
+   "answer": "Breaking a goal into steps before or during execution. It fails when the plan is made without enough information, when the agent does not revise the plan after a failed step, or when errors compound over many steps. Re-planning after each observation and short plans with checkpoints reduce this."
+  },
+  {
+   "id": "aie-051",
+   "number": 51,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Senior",
+   "question": "How do you run model-generated code safely?",
+   "answer": "Execute it in an isolated sandbox (container or microVM) with no secrets, restricted network, CPU, memory and time limits, a read-only or scratch filesystem, and resource cleanup after the run. Return only stdout, stderr and declared artifacts to the model."
+  },
+  {
+   "id": "aie-052",
+   "number": 52,
+   "topic": "agents",
+   "topic_name": "Agents, Tool Use and MCP",
+   "level": "Mid",
+   "question": "Workflows vs agents: how do you decide?",
+   "answer": "If you can draw the flowchart, build a workflow (deterministic steps with model calls inside); it is cheaper, testable and predictable. Use an agent when the path depends on intermediate results you cannot enumerate. Many good systems are workflows with one agentic step.",
+   "slug": "workflows-vs-agents",
+   "deep_dive": {
+    "what_it_tests": "Whether you can choose the simplest architecture that solves the task, and explain the predictability, cost and testing differences.",
+    "framework": [
+     "Workflow: code defines the steps (classify, retrieve, draft, check); the LLM fills specific steps.",
+     "Agent: the model decides which steps to take and in what order, using tools in a loop.",
+     "Choose a workflow when the path is known: it is cheaper, faster, easier to test and to audit.",
+     "Choose an agent when the path depends on what is discovered, such as open-ended research or debugging.",
+     "Hybrid: a workflow with one bounded agentic step is often the best fit."
+    ],
+    "follow_ups": [
+     {
+      "q": "Give an example where an agent clearly beats a workflow.",
+      "a": "Debugging a failing build across an unfamiliar codebase, where each finding determines the next file or command."
+     }
+    ],
+    "common_mistakes": [
+     "Building an agent for a task with fixed steps.",
+     "Assuming agents are always more capable.",
+     "Forgetting testing and audit requirements.",
+     "Not bounding the agentic part of a hybrid."
+    ]
+   }
+  },
+  {
+   "id": "aie-053",
+   "number": 53,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Mid",
+   "question": "When should you fine-tune instead of prompting or RAG?",
+   "answer": "When you need consistent format or style, a narrow task at lower cost or latency with a smaller model, domain language the base model handles poorly, or behavior that long prompts cannot hold. Not for adding facts that change; use retrieval for those.",
+   "slug": "rag-vs-fine-tuning",
+   "deep_dive": {
+    "what_it_tests": "Whether you choose techniques by the problem (knowledge vs behavior), start with the cheapest loop, and know that the options combine rather than compete.",
+    "framework": [
+     "Start with prompting plus a small eval set; it is the fastest loop.",
+     "Add RAG when answers depend on private or changing knowledge, or need citations.",
+     "Fine-tune when you need consistent format or style, a narrow task at lower cost or latency with a smaller model, domain language the base model handles poorly, or behavior long prompts cannot hold.",
+     "Rule out fine-tuning for facts that change; retrieval handles those.",
+     "Say they combine: a fine-tuned model plus RAG is common."
+    ],
+    "follow_ups": [
+     {
+      "q": "Fine-tuning vs in-context learning: what is the difference?",
+      "a": "In-context learning puts instructions and examples in the prompt and changes no weights. Fine-tuning changes the weights with training examples, which needs data, evaluation and redeployment."
+     }
+    ],
+    "common_mistakes": [
+     "Treating RAG and fine-tuning as either/or.",
+     "Proposing fine-tuning to teach the model facts that change often.",
+     "Skipping the prompting baseline and the eval set that tells you whether anything improved.",
+     "Ignoring the operational cost of fine-tuning: data, evaluation and redeployment.",
+     "Forgetting that a smaller fine-tuned model can be a cost and latency play."
+    ]
+   }
+  },
+  {
+   "id": "aie-054",
+   "number": 54,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Mid",
+   "question": "How do you build a fine-tuning dataset?",
+   "answer": "Collect real inputs, write or curate high-quality target outputs, deduplicate, remove PII, balance across task types and edge cases, and hold out a test set before training. Quality beats volume: a few thousand clean examples often outperform a large noisy set. Version the dataset with the model.",
+   "slug": "how-to-build-a-fine-tuning-dataset",
+   "deep_dive": {
+    "what_it_tests": "Whether you know that data quality and coverage drive fine-tuning results, and whether you follow a disciplined process including a held-out evaluation.",
+    "framework": [
+     "Define the target behavior and output format precisely, with a written spec.",
+     "Collect real inputs from logs or users, covering common cases, edge cases and refusals.",
+     "Produce excellent outputs: expert-written, or model-generated and then reviewed.",
+     "Clean: deduplicate, remove personal data, fix inconsistencies and balance categories.",
+     "Hold out an eval set before training, start small (hundreds to a few thousand examples), train, and iterate on the failures."
+    ],
+    "follow_ups": [
+     {
+      "q": "How many examples do you need?",
+      "a": "For format or style, often a few hundred good examples; harder behaviors need more, and the eval curve tells you when more data stops helping."
+     }
+    ],
+    "common_mistakes": [
+     "Collecting lots of data before defining the target behavior.",
+     "Using synthetic outputs without review.",
+     "Letting near-duplicates leak between train and eval sets.",
+     "Leaving out refusal and edge cases."
+    ]
+   }
+  },
+  {
+   "id": "aie-055",
+   "number": 55,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Senior",
+   "question": "What is catastrophic forgetting and how do you limit it?",
+   "answer": "Fine-tuning on a narrow set can degrade general abilities the base model had. Limit it with parameter-efficient methods (LoRA), lower learning rates and fewer epochs, mixing in general instruction data, and evaluating on general benchmarks as well as the target task.",
+   "slug": "what-is-catastrophic-forgetting",
+   "deep_dive": {
+    "what_it_tests": "Whether you know fine-tuning can damage existing capabilities and can name practical ways to prevent and detect it.",
+    "framework": [
+     "Define it: training on a narrow task overwrites weights that supported other skills, so general ability or instruction following drops.",
+     "Use parameter-efficient methods such as LoRA, which leave the base weights frozen.",
+     "Mix in general or replay data alongside the task data.",
+     "Train gently: lower learning rates, fewer epochs, early stopping.",
+     "Measure: run general capability and safety evals before and after, not just the target task."
+    ],
+    "follow_ups": [
+     {
+      "q": "Does LoRA prevent forgetting completely?",
+      "a": "No; it reduces it, but the adapted model can still behave worse on other tasks, so regression evals remain necessary."
+     }
+    ],
+    "common_mistakes": [
+     "Only evaluating the target task after fine-tuning.",
+     "Training many epochs on a small narrow dataset.",
+     "Assuming LoRA removes the risk entirely.",
+     "Forgetting safety behavior as a capability that can regress."
+    ]
+   }
+  },
+  {
+   "id": "aie-056",
+   "number": 56,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Mid",
+   "question": "What is model distillation and when would you use it?",
+   "answer": "Training a smaller student model to imitate a larger teacher, using the teacher's outputs (or probabilities) on many inputs. Use it to cut latency and cost for a well-defined task after you have proven quality with the large model. Check the provider's terms before training on another model's outputs.",
+   "slug": "what-is-model-distillation",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand how distillation works for LLMs, can name the conditions where it pays off, and know the practical limits including licensing terms.",
+    "framework": [
+     "Define it: train a smaller student model to imitate a larger teacher model's outputs.",
+     "Methods: train on the teacher's generated responses, or match its probability distributions when you have access to logits.",
+     "When to use it: a narrow, high-volume task where the large model works well but costs too much or is too slow.",
+     "Process: generate teacher outputs on real inputs, filter for quality, fine-tune the student, compare on a held-out eval.",
+     "Limits: the student rarely matches the teacher outside the task, and model terms of use may restrict training on outputs."
+    ],
+    "follow_ups": [
+     {
+      "q": "Distillation vs quantization?",
+      "a": "Quantization shrinks the same model's numeric precision; distillation trains a different, smaller model. They can be combined."
+     }
+    ],
+    "common_mistakes": [
+     "Expecting the student to match the teacher on general tasks.",
+     "Evaluating only agreement with the teacher.",
+     "Using unfiltered teacher outputs.",
+     "Ignoring the teacher model's terms of use."
+    ]
+   }
+  },
+  {
+   "id": "aie-057",
+   "number": 57,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Senior",
+   "question": "Explain DPO in one minute.",
+   "answer": "Direct Preference Optimization (Rafailov et al., 2023) trains on pairs of chosen and rejected responses with a classification-style loss that increases the likelihood of the chosen response relative to a frozen reference model. It reaches results similar to RLHF without training a separate reward model or running RL, so it is simpler and more stable.",
+   "slug": "what-is-dpo",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand what DPO optimizes, how it differs from reward-model RLHF, and what makes preference data good.",
+    "framework": [
+     "Data: each example has a prompt, a chosen response and a rejected response.",
+     "Objective: raise the probability of chosen responses relative to rejected ones, measured against a frozen reference model.",
+     "No separate reward model and no RL loop, so training is simpler and more stable.",
+     "Beta controls how far the model may move from the reference: higher beta keeps it closer.",
+     "Data quality matters most: clear, consistent preferences that reflect the behavior you want."
+    ],
+    "follow_ups": [
+     {
+      "q": "When might PPO-style RLHF still be preferred?",
+      "a": "When you want online exploration with fresh samples or a reusable reward model across many training runs."
+     }
+    ],
+    "common_mistakes": [
+     "Calling DPO reinforcement learning with a reward model.",
+     "Forgetting the reference model in the loss.",
+     "Using rejected answers that are obviously bad, which teaches little.",
+     "Ignoring length bias in preference data."
+    ]
+   }
+  },
+  {
+   "id": "aie-058",
+   "number": 58,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Mid",
+   "question": "How do you evaluate a fine-tuned model before shipping?",
+   "answer": "Compare against the base model and the prompted baseline on a held-out set of the target task, a general-capability set to catch regressions, safety tests, and side-by-side human or LLM-judge review. Ship only if it wins on the target metric without unacceptable regressions, and canary it with monitoring."
+  },
+  {
+   "id": "aie-059",
+   "number": 59,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Entry",
+   "question": "What hyperparameters matter most in LoRA fine-tuning?",
+   "answer": "Learning rate, number of epochs, rank r and alpha (scaling), which modules get adapters, batch size and sequence length. Overfitting usually shows as falling training loss with flat or rising validation loss; stop early and keep the best checkpoint."
+  },
+  {
+   "id": "aie-060",
+   "number": 60,
+   "topic": "fine-tuning",
+   "topic_name": "Fine-Tuning and Model Adaptation",
+   "level": "Senior",
+   "question": "What is synthetic data and what are its risks?",
+   "answer": "Training examples generated by models, used to expand coverage or create preference pairs. Risks: copying the generator's errors and style, low diversity, contamination of your eval set, and degradation when models train repeatedly on model-generated data (\"model collapse\", Shumailov et al.). Mitigate with filtering, human spot checks, mixing in real data and strict eval separation."
+  },
+  {
+   "id": "aie-061",
+   "number": 61,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Entry",
+   "question": "Why is evaluating LLM applications hard?",
+   "answer": "Outputs are open-ended, many answers can be correct, quality has several dimensions (correctness, faithfulness, tone, safety), and small prompt or model changes shift behavior unpredictably. That is why teams build task-specific eval sets instead of relying on public benchmarks.",
+   "slug": "how-do-you-evaluate-an-llm",
+   "deep_dive": {
+    "what_it_tests": "Whether you evaluate the application on your task instead of quoting public benchmarks, can build an eval set, make an LLM judge trustworthy, and wire evaluation into releases.",
+    "framework": [
+     "Say why it is hard: open-ended outputs, many correct answers, several quality dimensions, and behavior that shifts with small changes.",
+     "Build a task-specific eval set: real or realistic inputs covering common cases, edge cases and known failures, with expected outputs or grading criteria, versioned, starting at 50 to 200 examples, with a held-out portion.",
+     "Choose graders: exact match and programmatic checks first, then a calibrated LLM judge, then human review.",
+     "Make the judge reliable: precise rubric, reference answers, justification before score, pairwise comparison, order swapping, calibration against human labels.",
+     "Run offline evals as regression tests in CI, and measure online with A/B tests, feedback and task completion."
+    ],
+    "follow_ups": [
+     {
+      "q": "How do you make LLM-as-judge reliable?",
+      "a": "Precise rubric, reference answer where possible, justification before score, pairwise comparison for subjective quality, swap answer order, watch for length and self-preference bias, and calibrate against human labels."
+     },
+     {
+      "q": "Offline vs online evaluation: what is the difference?",
+      "a": "Offline runs a fixed eval set before release to catch regressions. Online measures live behavior through A/B tests, feedback, task completion and sampled reviews."
+     }
+    ],
+    "common_mistakes": [
+     "Answering with public benchmark scores instead of a task-specific eval set.",
+     "Tuning prompts on the same examples used to report results, with no held-out portion.",
+     "Trusting an LLM judge that was never calibrated against human labels.",
+     "Running evals by hand occasionally instead of on every change.",
+     "Stopping at offline metrics without checking whether users are better off."
+    ]
+   }
+  },
+  {
+   "id": "aie-062",
+   "number": 62,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Mid",
+   "question": "How do you build an eval set?",
+   "answer": "Start from real or realistic inputs, cover common cases, edge cases and known failures, write expected outputs or grading criteria for each, and keep it versioned. Start with 50 to 200 examples and grow it from production failures. Keep a held-out portion that is never used for prompt tuning."
+  },
+  {
+   "id": "aie-063",
+   "number": 63,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Senior",
+   "question": "How do you make LLM-as-judge reliable?",
+   "answer": "Give the judge a precise rubric and, where possible, a reference answer; ask for a short justification before the score; use pairwise comparison for subjective quality; swap answer order to control position bias; watch for length and self-preference bias; and calibrate against human labels, reporting agreement. Re-check calibration when the judge model changes.",
+   "slug": "how-to-make-llm-as-a-judge-reliable",
+   "deep_dive": {
+    "what_it_tests": "Whether you treat an LLM judge as a measurement instrument that needs calibration, and know its common biases and how to control them.",
+    "framework": [
+     "Write a specific rubric with one criterion per score and concrete examples of each score.",
+     "Prefer pairwise or binary judgments over vague 1-10 scales.",
+     "Control known biases: position (swap the order and average), length and self-preference.",
+     "Ask for a short justification before the score, and use a low temperature.",
+     "Calibrate against human labels on a sample, report agreement, and re-check when the judge model or prompt changes."
+    ],
+    "follow_ups": [
+     {
+      "q": "What agreement level is good enough?",
+      "a": "Close to the agreement between two human raters on the same task; if humans disagree a lot, the rubric needs work first."
+     }
+    ],
+    "common_mistakes": [
+     "Using a vague overall quality score.",
+     "Not swapping positions in pairwise comparisons.",
+     "Trusting the judge without measuring agreement with humans.",
+     "Changing the judge model mid-experiment."
+    ]
+   }
+  },
+  {
+   "id": "aie-064",
+   "number": 64,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Mid",
+   "question": "Offline vs online evaluation: what is the difference?",
+   "answer": "Offline: run a fixed eval set before release to catch regressions. Online: measure live behavior through A/B tests, user feedback, task completion, escalation rates and sampled reviews. Both are needed: offline gates releases, online tells you whether users are actually better off."
+  },
+  {
+   "id": "aie-065",
+   "number": 65,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Mid",
+   "question": "How do you A/B test an AI feature?",
+   "answer": "Randomize users (not requests) to variants, define a primary metric tied to user value (task success, retention, resolution rate) plus guardrail metrics (latency, cost, complaints), size the test for the effect you care about, and watch for novelty effects. Keep model, prompt and retrieval changes separable so you know what caused the result.",
+   "slug": "how-to-ab-test-an-ai-feature",
+   "deep_dive": {
+    "what_it_tests": "Whether you can connect offline evaluation with online experiments and choose metrics that reflect user value rather than model scores.",
+    "framework": [
+     "Gate with offline evals first so only candidates that pass reach users.",
+     "Pick one primary metric tied to user value, such as task success or resolution without escalation.",
+     "Add guardrail metrics: latency, cost per request, complaints, safety flags.",
+     "Randomize by user, size the test for the effect you care about, and fix the duration in advance.",
+     "Analyze honestly: avoid peeking, check segments, and read sampled conversations alongside the numbers."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why randomize by user instead of by request?",
+      "a": "Per-request switching gives users an inconsistent experience and contaminates behavioral metrics such as retention."
+     }
+    ],
+    "common_mistakes": [
+     "Skipping offline evaluation and testing everything live.",
+     "Using model scores as the primary online metric.",
+     "Stopping the test as soon as it looks significant.",
+     "Ignoring cost and latency guardrails."
+    ]
+   }
+  },
+  {
+   "id": "aie-066",
+   "number": 66,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Entry",
+   "question": "What metrics do you track for a production LLM feature?",
+   "answer": "Quality (eval scores, user ratings, task success), safety (policy violations, refusals), latency (time to first token, total time at p50/p95/p99), cost (tokens and dollars per request), reliability (error, timeout and retry rates) and usage. Slice them by user segment and model version."
+  },
+  {
+   "id": "aie-067",
+   "number": 67,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Senior",
+   "question": "What is benchmark contamination and why does it matter?",
+   "answer": "Test questions from a benchmark leaking into training data, which inflates scores without real capability. It is why public leaderboard results may not predict performance on your task. Use private, recently written eval sets and check for overlap when you fine-tune.",
+   "slug": "what-is-benchmark-contamination",
+   "deep_dive": {
+    "what_it_tests": "Whether you read public benchmark scores critically and know how to protect your own evaluation from the same problem.",
+    "framework": [
+     "Define it: benchmark questions or answers appear in a model's training data, so the score measures memory, not ability.",
+     "How it happens: benchmarks are published online and web-scale crawls pick them up, directly or through paraphrases.",
+     "Effect: inflated scores and misleading model comparisons.",
+     "Detection: n-gram overlap checks, testing on rephrased or newly written items, and comparing with performance on fresh data.",
+     "Protection: keep a private eval set built from your own tasks and refresh it over time."
+    ],
+    "follow_ups": [
+     {
+      "q": "Can your own eval set get contaminated?",
+      "a": "Yes, if it leaks into fine-tuning data or you tune prompts against it repeatedly; keep a frozen hold-out portion."
+     }
+    ],
+    "common_mistakes": [
+     "Choosing a model purely from leaderboard scores.",
+     "Publishing or sharing your private eval set.",
+     "Tuning prompts on the same set used for the final decision.",
+     "Assuming contamination only means exact copies; paraphrases count too."
+    ]
+   }
+  },
+  {
+   "id": "aie-068",
+   "number": 68,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Mid",
+   "question": "How do you evaluate hallucination or faithfulness?",
+   "answer": "Break the answer into individual claims and check each against the provided sources (with an NLI model or an LLM judge), then report the share of supported claims. Pair it with citation checks: does the cited passage actually contain the claim?"
+  },
+  {
+   "id": "aie-069",
+   "number": 69,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Mid",
+   "question": "What is regression testing for prompts and models?",
+   "answer": "Running the eval suite automatically in CI on every prompt, model or retrieval change and blocking the change if key metrics drop beyond a threshold. It turns prompt changes into reviewed code changes."
+  },
+  {
+   "id": "aie-070",
+   "number": 70,
+   "topic": "evaluation",
+   "topic_name": "Evaluation",
+   "level": "Senior",
+   "question": "How do you choose between two models for a feature?",
+   "answer": "Run both on your eval set and compare quality, then latency at your expected load, cost per successful task (not per token), context and tooling needs, data and compliance terms, and reliability of the provider. Often a cheaper model plus routing for hard cases wins."
+  },
+  {
+   "id": "aie-071",
+   "number": 71,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "Design a customer-support assistant for a SaaS company.",
+   "answer": "Clarify scope (answer questions, take actions, or both), channels, volume and escalation rules. Components: RAG over help docs and past tickets with permission filters; account tools with read-only defaults and confirmation for changes; conversation memory; intent routing to a cheap model for simple questions; human handoff with full context; evals on resolution accuracy; monitoring of escalation and satisfaction. Discuss failure modes: stale docs, prompt injection through tickets, and wrong refunds.",
+   "slug": "design-a-customer-support-chatbot",
+   "deep_dive": {
+    "what_it_tests": "Whether you can structure an end-to-end LLM system: requirements, architecture, safe actions, escalation, evaluation and metrics, with sensible trade-offs.",
+    "framework": [
+     "Clarify requirements: channels, languages, volume, which actions are allowed, latency target and when to hand off to humans.",
+     "Architecture: classify intent, retrieve from help docs and past resolved tickets, and call account tools with the user's permissions.",
+     "Generate grounded answers with citations; route low-confidence or sensitive cases to a human with a summary.",
+     "Guardrails: no unapproved refunds or account changes, PII handling, injection-resistant tool use.",
+     "Evaluate offline on real tickets, then track resolution rate, escalation quality, customer satisfaction, cost and latency."
+    ],
+    "follow_ups": [
+     {
+      "q": "How do you keep answers current when docs change?",
+      "a": "Re-index on document updates, show source links, and flag answers whose sources were recently changed or removed."
+     }
+    ],
+    "common_mistakes": [
+     "Jumping to the model choice before clarifying scope and allowed actions.",
+     "No escalation path or a hand-off that loses context.",
+     "Letting the model take account actions without permission checks.",
+     "Measuring only deflection instead of real resolution."
+    ]
+   }
+  },
+  {
+   "id": "aie-072",
+   "number": 72,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "Design an evaluation pipeline for an LLM product.",
+   "answer": "Versioned eval datasets, a runner that executes prompts/models in parallel with caching, graders (exact match, programmatic checks, calibrated LLM judges, human review queues), result storage per run, dashboards with diffs against the baseline, and CI gates. Feed production failures back into the dataset."
+  },
+  {
+   "id": "aie-073",
+   "number": 73,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Mid",
+   "question": "Design a model-serving platform.",
+   "answer": "API gateway with auth, quotas and routing; model servers with continuous batching and paged KV cache (e.g. vLLM or TGI); autoscaling on queue depth and GPU utilization; streaming responses; per-tenant rate limits; health checks and fallbacks to another model or provider; and metrics for time to first token, tokens per second and cost."
+  },
+  {
+   "id": "aie-074",
+   "number": 74,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Mid",
+   "question": "Design a document-processing (extraction) pipeline.",
+   "answer": "Ingest, then OCR or layout parsing, classify document type, extract fields with schema-constrained output, validate (types, cross-field rules, totals), score confidence, send low-confidence items to human review, and store with lineage back to the page. Measure field-level accuracy per document type."
+  },
+  {
+   "id": "aie-075",
+   "number": 75,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "Design an LLM gateway for a company.",
+   "answer": "One internal endpoint in front of all providers: authentication, per-team keys and budgets, model routing and fallback, prompt and response logging with PII redaction, caching, rate limiting, usage and cost reporting, and policy enforcement. It gives central control and lets teams switch models without code changes.",
+   "slug": "design-an-llm-gateway",
+   "deep_dive": {
+    "what_it_tests": "Whether you can design shared platform infrastructure for LLM use: reliability, cost control, security and observability across many teams.",
+    "framework": [
+     "Unified API: one interface for many providers and self-hosted models, so teams do not integrate each one.",
+     "Access control: per-team keys, quotas, rate limits and budgets.",
+     "Routing: choose models by policy, with fallbacks on errors and timeouts, and retries with backoff.",
+     "Efficiency: response and prompt caching, and streaming passthrough.",
+     "Governance and observability: logging with PII redaction, cost attribution per team, data-residency rules and dashboards."
+    ],
+    "follow_ups": [
+     {
+      "q": "What is the biggest risk of a central gateway?",
+      "a": "It becomes a single point of failure and a latency hop, so it needs redundancy, low overhead and a careful rollout."
+     }
+    ],
+    "common_mistakes": [
+     "Forgetting per-team cost attribution and budgets.",
+     "Logging full prompts with personal data unredacted.",
+     "No fallback when a provider is down.",
+     "Adding heavy processing that increases latency on every request."
+    ]
+   }
+  },
+  {
+   "id": "aie-076",
+   "number": 76,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Mid",
+   "question": "Design a semantic search engine.",
+   "answer": "Ingestion and chunking, embeddings, an ANN index with metadata filters, hybrid lexical plus vector retrieval, re-ranking, snippets and highlighting, query understanding (spelling, synonyms), and click and relevance feedback for tuning. Evaluate with nDCG on labelled queries."
+  },
+  {
+   "id": "aie-077",
+   "number": 77,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "Design a real-time content moderation system.",
+   "answer": "Layered: fast rules and hashes for known bad content, a small classifier for most traffic, and an LLM or human review for ambiguous cases; policy defined as labeled categories; latency budget per layer; appeals flow; and monitoring of precision and recall per category and language. Bias and over-blocking are as important as misses."
+  },
+  {
+   "id": "aie-078",
+   "number": 78,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "How do you architect a multi-tenant AI platform?",
+   "answer": "Isolate tenant data at storage and retrieval (tenant ID filters enforced server-side, separate indexes for high-sensitivity tenants), per-tenant keys, quotas and cost tracking, per-tenant prompt or adapter configuration, noisy-neighbor protection, and audit logs. Never let one tenant's data enter another's prompt or cache."
+  },
+  {
+   "id": "aie-079",
+   "number": 79,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Mid",
+   "question": "How do you design caching for LLM applications?",
+   "answer": "Exact-match response cache for repeated identical requests; provider prompt caching for long shared prefixes; semantic cache (embedding similarity above a strict threshold) for near-duplicate questions where answers do not depend on the user; embedding cache during ingestion. Include model and prompt versions in cache keys and set TTLs so answers do not go stale.",
+   "slug": "how-to-cache-llm-responses",
+   "deep_dive": {
+    "what_it_tests": "Whether you know the different cache layers for LLM systems, their risks, and how to key and invalidate them safely.",
+    "framework": [
+     "Exact-match response cache: key on a hash of model, version, full prompt and parameters.",
+     "Prompt (prefix) caching: keep the static part of prompts first so providers or the inference server can reuse computation.",
+     "Semantic cache: reuse answers for similar queries, with a high similarity threshold and only for safe, generic content.",
+     "Correctness: include permissions and tenant in keys, set expiry, and invalidate when source documents change.",
+     "Measure hit rate, savings, and the error rate of cached answers."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why can a semantic cache be dangerous?",
+      "a": "Similar-looking questions can need different answers, so it can serve a confidently wrong or another user's answer."
+     }
+    ],
+    "common_mistakes": [
+     "Leaving the model version or parameters out of the cache key.",
+     "Sharing cached answers across users with different permissions.",
+     "Putting variable content at the start of the prompt, which defeats prefix caching.",
+     "Using a loose similarity threshold for semantic caching."
+    ]
+   }
+  },
+  {
+   "id": "aie-080",
+   "number": 80,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "How do you route queries across multiple models?",
+   "answer": "Classify each request by difficulty, task type or required capability (a rules layer or a small classifier), send easy requests to a cheap fast model and hard ones to a stronger model, and escalate when a verifier or confidence check fails. Measure quality and cost per route."
+  },
+  {
+   "id": "aie-081",
+   "number": 81,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Mid",
+   "question": "How do you migrate a product from one model to another?",
+   "answer": "Run both on the eval set, adjust prompts for the new model, shadow-test on live traffic, compare quality, latency and cost, roll out gradually behind a flag with rollback, and keep monitoring. Re-embed if the embedding model changes."
+  },
+  {
+   "id": "aie-082",
+   "number": 82,
+   "topic": "system-design",
+   "topic_name": "AI System Design",
+   "level": "Senior",
+   "question": "Design a code-assistant feature for an IDE.",
+   "answer": "Context gathering (current file, related files via retrieval over the repo, recent edits), a low-latency model for inline completion and a stronger one for chat or multi-file edits, streaming, a sandbox for running tests, and acceptance-rate and edit-survival metrics. Respect repository permissions and keep secrets out of prompts."
+  },
+  {
+   "id": "aie-083",
+   "number": 83,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Entry",
+   "question": "How do you monitor an LLM system in production?",
+   "answer": "Log each request with prompt version, model, tokens, latency, cost and outcome; trace multi-step calls; dashboards and alerts on error rate, p95 latency, cost spikes and quality signals; sample conversations for review; and track user feedback. Redact PII in logs."
+  },
+  {
+   "id": "aie-084",
+   "number": 84,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "How do you reduce LLM inference cost?",
+   "answer": "Route easy requests to smaller models, shorten prompts, use prompt caching for shared prefixes, cache responses, cap output length, batch offline work (batch APIs are usually discounted), and for self-hosting use quantization and continuous batching. Track cost per successful task.",
+   "slug": "how-to-reduce-llm-inference-cost",
+   "deep_dive": {
+    "what_it_tests": "Whether you approach cost with measurement and a ranked list of levers, while protecting quality with evaluation.",
+    "framework": [
+     "Measure: cost per request and per successful task, broken down by feature, model, input and output tokens.",
+     "Right-size models: route easy requests to smaller models and reserve large ones for hard cases.",
+     "Cut tokens: shorter prompts, fewer retrieved chunks, output length limits, and summarized history.",
+     "Reuse and batch: response and prefix caching, and batch APIs for offline jobs.",
+     "Self-hosted levers: quantization, continuous batching and high GPU utilization; re-run evals after every change."
+    ],
+    "follow_ups": [
+     {
+      "q": "Which lever do you try first?",
+      "a": "Usually routing to smaller models and trimming tokens, since they need little infrastructure and often give the largest savings."
+     }
+    ],
+    "common_mistakes": [
+     "Optimizing without a cost breakdown.",
+     "Measuring cost per call instead of per successful task.",
+     "Ignoring output tokens, which are often priced higher.",
+     "Cutting cost without re-running quality evals."
+    ]
+   }
+  },
+  {
+   "id": "aie-085",
+   "number": 85,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "How do you reduce latency?",
+   "answer": "Stream tokens, choose smaller or faster models for the first response, cut prompt length, parallelize retrieval and tool calls, cache, place servers near users, and use speculative decoding when self-hosting. Measure time to first token and total time separately.",
+   "slug": "how-to-reduce-llm-latency",
+   "deep_dive": {
+    "what_it_tests": "Whether you understand the parts of LLM latency and can pick fixes for each, including the user-perceived side.",
+    "framework": [
+     "Measure the parts: time to first token (TTFT), tokens per second, and total time including retrieval and tools.",
+     "Stream output so users see progress immediately.",
+     "Shorten inputs (less prefill) and outputs (fewer decode steps); output length often dominates.",
+     "Use smaller or faster models for simple steps, and prefix caching for repeated prompt parts.",
+     "Remove serial steps: run retrieval and tool calls in parallel, and cut unnecessary chain steps."
+    ],
+    "follow_ups": [
+     {
+      "q": "Why does output length matter more than input length?",
+      "a": "Prompt tokens are processed in parallel during prefill, while output tokens are generated one at a time."
+     }
+    ],
+    "common_mistakes": [
+     "Optimizing without a latency breakdown.",
+     "Not streaming in user-facing flows.",
+     "Running independent calls sequentially.",
+     "Looking only at average latency instead of p95."
+    ]
+   }
+  },
+  {
+   "id": "aie-086",
+   "number": 86,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Entry",
+   "question": "How do you handle provider rate limits and outages?",
+   "answer": "Retry transient errors with exponential backoff and jitter, respect retry-after headers, queue non-urgent work, spread load across keys or regions where allowed, and fail over to a secondary model or provider with a tested prompt."
+  },
+  {
+   "id": "aie-087",
+   "number": 87,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "How do you handle PII in AI systems?",
+   "answer": "Minimize what is sent, detect and redact or tokenize PII before prompts and logs, check provider data-retention and training terms, encrypt at rest and in transit, apply retention limits, and support deletion requests. Test redaction recall; missed PII in logs is a common leak."
+  },
+  {
+   "id": "aie-088",
+   "number": 88,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "What is model or data drift, and how do you detect it?",
+   "answer": "The input distribution, user behavior or the provider model itself changes, and quality shifts. Detect it by monitoring input statistics and topics, eval scores on sampled traffic, user feedback and outcome metrics over time, and by pinning model versions so upgrades are deliberate."
+  },
+  {
+   "id": "aie-089",
+   "number": 89,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Senior",
+   "question": "What does red-teaming an AI system involve?",
+   "answer": "Deliberately attacking the system before release: jailbreaks, prompt injection through every input channel, data exfiltration, harmful content, tool misuse and bias. Use a threat model, both automated attack generation and human testers, record findings with severity, fix, and turn findings into regression tests.",
+   "slug": "what-is-red-teaming-in-ai",
+   "deep_dive": {
+    "what_it_tests": "Whether you can run red-teaming as a structured process tied to the actual product risks, not just a collection of jailbreak prompts.",
+    "framework": [
+     "Scope: list the harms that matter for this product, such as data leaks, unsafe advice, unauthorized actions and policy violations.",
+     "Attack manually: jailbreaks, role-play, multi-turn escalation, and direct and indirect prompt injection through documents and tools.",
+     "Scale with automation: generate attack variations with models and fuzzing, and score results automatically.",
+     "Triage by severity and likelihood, fix with layered defenses, and re-test.",
+     "Keep successful attacks as regression tests and repeat before each major release."
+    ],
+    "follow_ups": [
+     {
+      "q": "Is red-teaming a one-time exercise?",
+      "a": "No; models, prompts and tools change, so it is repeated before releases and the regression suite runs continuously."
+     }
+    ],
+    "common_mistakes": [
+     "Testing only generic jailbreaks unrelated to the product's real risks.",
+     "Ignoring indirect injection through documents and tool outputs.",
+     "Fixing only by editing the system prompt.",
+     "Not turning findings into regression tests."
+    ]
+   }
+  },
+  {
+   "id": "aie-090",
+   "number": 90,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "What are guardrails, and where do they sit?",
+   "answer": "Checks around the model: input checks (policy, injection signals, PII), output checks (policy, schema, groundedness, sensitive data), and action checks (tool permissions, confirmations). Keep them independent of the main prompt so one failure does not disable all protection, and measure their false positive rate.",
+   "slug": "what-are-llm-guardrails",
+   "deep_dive": {
+    "what_it_tests": "Whether you see guardrails as layered controls around the model at specific points in the pipeline, and understand their trade-offs.",
+    "framework": [
+     "Input layer: detect prompt injection, off-topic or abusive requests, and redact personal data where needed.",
+     "Retrieval and tools layer: permission filtering, least-privilege credentials and argument validation.",
+     "Output layer: schema validation, policy and safety classifiers, groundedness checks and PII leak detection.",
+     "Action layer: human approval for irreversible or high-value actions.",
+     "Operations: measure false positives and latency, log blocks, and tune thresholds."
+    ],
+    "follow_ups": [
+     {
+      "q": "Is a strong system prompt a guardrail?",
+      "a": "It helps, but it can be overridden by injection, so real controls must live in code outside the model."
+     }
+    ],
+    "common_mistakes": [
+     "Relying on the system prompt as the only guardrail.",
+     "Adding checks without measuring false positives and latency.",
+     "Forgetting tool permissions and action approval.",
+     "Using one layer and assuming it catches everything."
+    ]
+   }
+  },
+  {
+   "id": "aie-091",
+   "number": 91,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Senior",
+   "question": "How do you measure and reduce bias in an LLM feature?",
+   "answer": "Define the harms relevant to your use case, build test sets that vary protected attributes while holding the task constant, compare outcomes and error rates across groups, and review qualitatively. Reduce with better data, prompt and policy changes, and human review for high-stakes decisions."
+  },
+  {
+   "id": "aie-092",
+   "number": 92,
+   "topic": "production",
+   "topic_name": "Production, Cost and Safety",
+   "level": "Mid",
+   "question": "How do you deploy prompt or model changes safely?",
+   "answer": "Treat them like code: review, offline evals in CI, feature flags, canary or percentage rollout with automated rollback on metric drops, and versioned configs so any response can be traced to the exact prompt and model."
+  },
+  {
+   "id": "aie-093",
+   "number": 93,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Entry",
+   "question": "Implement retry with exponential backoff for an LLM API call.",
+   "answer": "Retry only transient failures (429, 5xx, timeouts), not 4xx validation errors. Wait base * 2^attempt plus random jitter, honor Retry-After, cap attempts and total time.\n\n```python\nimport random, time\ndef call_with_retry(fn, max_attempts=5, base=0.5, cap=20):\n    for attempt in range(max_attempts):\n        try:\n            return fn()\n        except TransientError as e:\n            if attempt == max_attempts - 1:\n                raise\n            wait = getattr(e, 'retry_after', None) or min(cap, base * 2 ** attempt)\n            time.sleep(wait + random.uniform(0, wait / 2))\n```"
+  },
+  {
+   "id": "aie-094",
+   "number": 94,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Entry",
+   "question": "Write a structure-aware text chunker.",
+   "answer": "Split on headings and blank lines first, then pack paragraphs into chunks up to a token budget, with a small overlap, and never split inside code blocks.\n\n```python\ndef chunk(paragraphs, max_tokens=400, overlap=1, count=len):\n    chunks, cur = [], []\n    for p in paragraphs:\n        if cur and sum(map(count, cur)) + count(p) > max_tokens:\n            chunks.append('\\n\\n'.join(cur))\n            cur = cur[-overlap:] if overlap else []\n        cur.append(p)\n    if cur:\n        chunks.append('\\n\\n'.join(cur))\n    return chunks\n```\n\nPass a real tokenizer's length function as count; len counts characters."
+  },
+  {
+   "id": "aie-095",
+   "number": 95,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Mid",
+   "question": "Implement hybrid search with reciprocal rank fusion.",
+   "answer": "Run BM25 and vector search separately, then fuse by rank, which avoids normalizing incompatible scores.\n\n```python\ndef rrf(rankings, k=60):\n    scores = {}\n    for ranked_ids in rankings:\n        for rank, doc_id in enumerate(ranked_ids):\n            scores[doc_id] = scores.get(doc_id, 0) + 1 / (k + rank + 1)\n    return sorted(scores, key=scores.get, reverse=True)\n```\n\n```python\nfused = rrf([bm25_ids, vector_ids])[:20]  # then re-rank\n```"
+  },
+  {
+   "id": "aie-096",
+   "number": 96,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Mid",
+   "question": "Parse and validate structured output from an LLM, with a repair retry.",
+   "answer": "```python\nfrom pydantic import BaseModel, ValidationError\nclass Invoice(BaseModel):\n    vendor: str\n    total: float\n    currency: str\n```\n\n```python\ndef extract(llm, text, retries=2):\n    prompt = f'Return JSON for Invoice from:\\n{text}'\n    for _ in range(retries + 1):\n        raw = llm(prompt)\n        try:\n            return Invoice.model_validate_json(raw)\n        except ValidationError as e:\n            prompt += f'\\nYour last output was invalid: {e}. Return only valid JSON.'\n    raise ValueError('could not parse')\n```\n\nPrefer the provider's schema mode when available; keep this as the safety net."
+  },
+  {
+   "id": "aie-097",
+   "number": 97,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Mid",
+   "question": "Implement a token-bucket rate limiter for LLM calls.",
+   "answer": "Limit both requests and tokens per minute, because providers enforce both.\n\n```python\nimport time, threading\nclass TokenBucket:\n    def __init__(self, rate_per_sec, capacity):\n        self.rate, self.cap = rate_per_sec, capacity\n        self.tokens, self.t = capacity, time.monotonic()\n        self.lock = threading.Lock()\n    def acquire(self, n=1):\n        while True:\n            with self.lock:\n                now = time.monotonic()\n                self.tokens = min(self.cap, self.tokens + (now - self.t) * self.rate)\n                self.t = now\n                if self.tokens >= n:\n                    self.tokens -= n\n                    return\n                wait = (n - self.tokens) / self.rate\n            time.sleep(wait)\n```"
+  },
+  {
+   "id": "aie-098",
+   "number": 98,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Mid",
+   "question": "Implement a minimal agent loop with tool calls and a step limit.",
+   "answer": "```python\ndef run_agent(llm, tools, task, max_steps=8):\n    messages = [{'role': 'user', 'content': task}]\n    for _ in range(max_steps):\n        reply = llm(messages, tools=list(tools))\n        messages.append(reply)\n        if not reply.get('tool_calls'):\n            return reply['content']\n        for call in reply['tool_calls']:\n            fn = tools.get(call['name'])\n            try:\n                result = fn(**call['args']) if fn else f'unknown tool {call[\"name\"]}'\n            except Exception as e:\n                result = f'error: {e}'\n            messages.append({'role': 'tool', 'id': call['id'], 'content': str(result)})\n    return 'stopped: step limit reached'\n```\n\nIn production add argument validation, budgets, checkpointing and approval for side-effecting tools."
+  },
+  {
+   "id": "aie-099",
+   "number": 99,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Senior",
+   "question": "Implement a conversation-history manager that fits a token budget.",
+   "answer": "Always keep the system prompt and the latest user turn; add earlier turns newest-first until the budget is reached; summarize what was dropped into one message.\n\n```python\ndef fit_history(system, turns, budget, count, summarize):\n    kept, used = [], count(system) + count(turns[-1])\n    for t in reversed(turns[:-1]):\n        if used + count(t) > budget * 0.8:\n            break\n        kept.insert(0, t); used += count(t)\n    dropped = turns[:len(turns) - 1 - len(kept)]\n    summary = [summarize(dropped)] if dropped else []\n    return [system] + summary + kept + [turns[-1]]\n```"
+  },
+  {
+   "id": "aie-100",
+   "number": 100,
+   "topic": "coding",
+   "topic_name": "Coding",
+   "level": "Senior",
+   "question": "Write a small eval harness that compares two prompt versions.",
+   "answer": "```python\ndef evaluate(cases, run, graders):\n    rows = []\n    for c in cases:\n        out = run(c['input'])\n        rows.append({'id': c['id'], **{g.__name__: g(out, c) for g in graders}})\n    return rows\n```\n\n```python\ndef compare(cases, run_a, run_b, graders):\n    a, b = evaluate(cases, run_a, graders), evaluate(cases, run_b, graders)\n    for g in graders:\n        n = g.__name__\n        print(n, sum(r[n] for r in a) / len(a), sum(r[n] for r in b) / len(b))\n    return a, b\n```\n\nGraders return 0 or 1 (exact match, schema valid, judge pass). Report per-case diffs so regressions are visible, and fix the random seed or temperature for repeatability."
+  }
+ ]
+}

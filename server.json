@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Johnnnmai/ai-interview-questions-mcp",
+  "title": "AI Interview Questions",
+  "description": "100 graded AI Engineer interview questions with model answers and a mock interview prompt.",
+  "repository": { "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp", "source": "github" },
+  "websiteUrl": "https://johnnnmai.github.io/ai-engineer-interview-questions/?utm_source=mcp&utm_medium=registry&utm_campaign=line27_20261101",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "ai-interview-questions-mcp",
+      "version": "1.0.0",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}

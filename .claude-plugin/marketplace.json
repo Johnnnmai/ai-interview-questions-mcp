@@ -1,0 +1,12 @@
+{
+  "name": "valenx-press",
+  "description": "Interview practice plugins from Valenx Press",
+  "owner": { "name": "Valenx Press", "email": "press@valenx.org" },
+  "plugins": [
+    {
+      "name": "ai-interview-questions",
+      "source": "./plugin",
+      "description": "100 graded AI Engineer interview questions with model answers, plus a mock-interview skill"
+    }
+  ]
+}

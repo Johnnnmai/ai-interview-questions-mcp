@@ -1,0 +1,9 @@
+src/
+test/
+scripts/
+plugin/
+.claude-plugin/
+tsconfig.json
+*.mcpb
+*.tgz
+.git/

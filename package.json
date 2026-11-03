@@ -1,0 +1,59 @@
+{
+  "name": "ai-interview-questions-mcp",
+  "version": "1.0.0",
+  "description": "MCP server with 100 graded AI Engineer interview questions and model answers (LLMs, RAG, agents, evals, system design). Offline, no API keys.",
+  "type": "module",
+  "bin": {
+    "ai-interview-questions-mcp": "build/index.js"
+  },
+  "main": "build/index.js",
+  "files": [
+    "build",
+    "data",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js',0o755)\"",
+    "start": "node build/index.js",
+    "test": "node test/smoke.mjs",
+    "prepublishOnly": "npm run build && npm test",
+    "build:data": "python3 scripts/build_data.py ../ai-engineer-interview-questions"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "interview",
+    "interview-prep",
+    "interview-questions",
+    "ai-engineer",
+    "llm",
+    "rag",
+    "ai-agents",
+    "mock-interview",
+    "career"
+  ],
+  "author": "Valenx Press <press@valenx.org>",
+  "license": "MIT",
+  "homepage": "https://github.com/Johnnnmai/ai-interview-questions-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Johnnnmai/ai-interview-questions-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Johnnnmai/ai-interview-questions-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "mcpName": "io.github.Johnnnmai/ai-interview-questions-mcp",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}

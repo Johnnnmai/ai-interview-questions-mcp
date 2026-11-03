@@ -1,0 +1,40 @@
+
+> ai-interview-questions-mcp@1.0.0 test
+> node test/smoke.mjs
+
+PASS tools/list :: get_question,list_topics,random_question,search_questions
+PASS list_topics
+100 AI Engineer interview questions, updated 2026-11-01.
+
+- llm-fundamentals: LLM Fundamentals (15 questions: 6 Entry, 7 Mid, 2 Senior; ids aie-001-aie-015)
+- prompting: Prompting and Structured Output (10 questions: 3 Entry, 5 Mid, 2 Senior; ids aie-016-aie-025)
+PASS search_questions kv cache -> aie-003 first :: - aie-003 [Mid] (llm-fundamentals) Explain the KV cache and why it matters for inference.
+PASS search_questions with filters :: - aie-031 [Senior] (rag) How do you evaluate a RAG system? | --- | Source: AI Engineer Interview Questions by Valenx Press, https://johnnnmai.github.io/ai-engineer-interview-questions/?utm_source=mcp&utm_medium=tool&utm_campaign=line27_20261101&utm_content=search_questions
+PASS search_questions no match
+PASS get_question aie-026 full
+# aie-026: Explain the RAG architecture end to end.
+Level: Entry · Topic: RAG and Retrieval
+
+What it tests: Whether you can describe both halves of a RAG system (indexing and query time), name the parts that decide quality (chunking, hybrid search, re-ranking, metadata), and know that retrieval, not the generator, is usually where it fails first.
+
+## Model answer
+Indexing: parse documents, split i
+...
+&utm_medium=tool&utm_campaign=line27_20261101&utm_content=get_question · mock round timer https://johnnnmai.github.io/ai-engineer-interview-questions/mock-interview/?utm_source=mcp&utm_medium=tool&utm_campaign=line27_20261101&utm_content=get_question · study plan https://johnnnmai.github.io/ai-engineer-interview-questions/study-plan/?utm_source=mcp&utm_medium=tool&utm_campaign=line27_20261101&utm_content=get_question
+PASS get_question by slug, answer hidden
+PASS get_question by number (no deep dive)
+PASS get_question unknown -> isError :: Unknown question "aie-999". Valid ids are aie-001 to aie-100.
+PASS random_question seeded replay
+Practice set (3): answer each out loud in under 2 minutes, then call get_question for the model answer.
+- aie-060 [Senior] (fine-tuning) What is synthetic data and what are its risks?
+- aie-078 [Senior] (system-design) How do you architect a multi-tenant AI platform?
+- aie-025 [Senior] (prompting) How would you choose between a long prompt, RAG and fine-tuning for a new feature?
+PASS random_question topic filter
+PASS random_question rejects count>10
+PASS prompts/list
+PASS prompts/get mock_interview
+PASS resources/list :: 101
+PASS resources/read question
+PASS resources/read topics
+
+RESULT: 17/17 passed
