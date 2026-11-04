@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/ai-interview-questions-mcp)](https://www.npmjs.com/package/ai-interview-questions-mcp) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Free:** [Check your interview answer](https://johnnnmai.github.io/ai-engineer-interview-questions/answer-check/?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp)  |  **Weekly drills:** [Interview Pass, $19/mo](https://valenx.org/pass?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp)
+**Free:** [Check your interview answer](https://johnnnmai.github.io/ai-engineer-interview-questions/answer-check/?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp)  |  **Weekly drills:** [Interview Pass, $19/mo](https://valenx.org/pass?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp&utm_content=ai-interview-questions-mcp_L5)
 
 An MCP server that brings **200 graded interview questions with model answers** into Claude, Cursor, VS Code, or any MCP client: **100 AI Engineer** questions (LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production, coding) and **100 Investment Banking** questions (accounting, valuation, M&A, LBO, industry and restructuring). Practice, then run a mock interview with your assistant.
 
