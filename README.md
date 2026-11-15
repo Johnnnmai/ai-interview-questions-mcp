@@ -4,6 +4,8 @@
 
 **Free:** [Check your interview answer](https://johnnnmai.github.io/ai-engineer-interview-questions/answer-check/?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp)  |  **Weekly drills:** [Interview Pass, $19/mo](https://valenx.org/pass?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp&utm_content=ai-interview-questions-mcp_L5)
 
+**Free cheat sheet:** [12 must-know AI engineer interview questions](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-cheat-sheet-free?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_cheatsheet)  |  **Full kit:** [AI Engineer Interview Kit ($19.99)](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-kit-2026?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_kit)
+
 An MCP server that brings **200 graded interview questions with model answers** into Claude, Cursor, VS Code, or any MCP client: **100 AI Engineer** questions (LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production, coding) and **100 Investment Banking** questions (accounting, valuation, M&A, LBO, industry and restructuring). Practice, then run a mock interview with your assistant.
 
 - 200 questions (ids `aie-001` to `aie-100` and `ib-001` to `ib-100`), each graded **Entry / Mid / Senior**, with a model answer
@@ -146,6 +148,11 @@ npx @modelcontextprotocol/inspector node build/index.js
 `data/questions.json` is generated from the public files of the [question bank repo](https://github.com/Johnnnmai/ai-engineer-interview-questions) with `scripts/build_data.py`. `data/ib-questions.json` holds the 100 Investment Banking questions (`scripts/import_ib.py`).
 
 The content is educational interview practice, not a record of questions asked by any specific employer. Corrections are welcome via issues.
+
+## Practice materials
+
+- **Free cheat sheet:** [12 must-know AI engineer interview questions with concise model answers](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-cheat-sheet-free?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_cheatsheet)
+- **AI Engineer Interview Kit ($19.99):** [Playbook, 100 flashcards, and a scoring rubric](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-kit-2026?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_kit)
 
 ## License
 
