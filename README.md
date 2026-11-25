@@ -4,7 +4,7 @@
 
 **Free:** [Check your interview answer](https://johnnnmai.github.io/ai-engineer-interview-questions/answer-check/?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp)  |  **Weekly drills:** [Interview Pass, $19/mo](https://valenx.org/pass?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp&utm_content=ai-interview-questions-mcp_L5)
 
-**Black Friday (through Nov 30, code `BF30`):** [30% off 3-Playbook Bundle ($20.30, list $29)](https://valenx.org/go/bf-bundle?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_bf30) (PM/TPM + AI Engineer + Data Science)
+**Black Friday (through Nov 30, code `BF30`):** [30% off 3-Playbook Bundle ($20.30, list $29)](https://valenx.org/go/bf-bundle?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_bf30) (PM/TPM + AI Engineer + Data Science). Also: [PM/TPM/PGM Interview Structure Templates ($16.80, list $24)](https://valenx.org/go/bf-pm?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_bf30).
 
 **Free cheat sheet:** [12 must-know AI engineer interview questions](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-cheat-sheet-free?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_cheatsheet)  |  **Full kit:** [AI Engineer Interview Kit ($19.99)](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-kit-2026?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_kit)
 
