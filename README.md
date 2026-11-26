@@ -6,6 +6,8 @@
 
 **Black Friday (through Nov 30, code `BF30`):** [30% off 3-Playbook Bundle ($20.30, list $29)](https://valenx.org/go/bf-bundle?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_bf30) (PM/TPM + AI Engineer + Data Science). Also: [PM/TPM/PGM Interview Structure Templates ($16.80, list $24)](https://valenx.org/go/bf-pm?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_bf30).
 
+**Free ($0):** [AI Engineer Interview Cheat Sheet, 12 questions (PDF)](https://valenx.org/go/free-aie?utm_source=github&utm_medium=readme&utm_campaign=leadmagnet_202611&utm_content=ai-interview-questions-mcp) or the [Top 30 AI Engineer Interview Questions guide (13-page PDF)](https://valenx.org/go/free-aie30?utm_source=github&utm_medium=readme&utm_campaign=leadmagnet_202611&utm_content=ai-interview-questions-mcp). Type $0 at checkout; the PDF arrives by email.
+
 **Free cheat sheet:** [12 must-know AI engineer interview questions](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-cheat-sheet-free?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_cheatsheet)  |  **Full kit:** [AI Engineer Interview Kit ($19.99)](https://sirjohnnymai.gumroad.com/l/ai-engineer-interview-kit-2026?utm_source=github&utm_medium=readme&utm_campaign=ai-interview-questions-mcp_kit)
 
 An MCP server that brings **200 graded interview questions with model answers** into Claude, Cursor, VS Code, or any MCP client: **100 AI Engineer** questions (LLM fundamentals, prompting, RAG, agents and MCP, fine-tuning, evaluation, AI system design, production, coding) and **100 Investment Banking** questions (accounting, valuation, M&A, LBO, industry and restructuring). Practice, then run a mock interview with your assistant.
